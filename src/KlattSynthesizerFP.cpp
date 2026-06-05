@@ -589,7 +589,7 @@ void KlattSynthesizerFP::SynthesizeFrame(Frame frame, int16_t* outputBuffer, int
 
 #ifdef SHARPVOX_SAMPLED_GLOT
                 if (_useSampledGlot && _sgBufSize > 0) {
-                    _sgPhase += (float)effF0Hz / _sgNatPitchHz;
+                    _sgPhase += SgPitchShift ? (float)effF0Hz / _sgNatPitchHz : 1.0f;
                     if (_sgPhase >= (float)_sgBufSize) _sgPhase -= (float)_sgBufSize;
                     int32_t idx  = (int32_t)_sgPhase;
                     float   frac = _sgPhase - (float)idx;

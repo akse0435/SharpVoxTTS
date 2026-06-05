@@ -103,4 +103,5 @@ window.sharpVox = {
         _glotMono = null; _glotSrcRate = 0;
         worker.postMessage({ type: 'ClearGlottalSample' });
     },
+    SetGlottalPitchShift: (enabled) => worker.postMessage({ type: 'SetGlottalPitchShift', enabled }),
 };

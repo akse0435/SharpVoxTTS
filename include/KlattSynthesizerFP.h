@@ -87,6 +87,7 @@ namespace SharpVox {
         // Resamples to the synth rate internally. Replaces the polynomial until ClearGlottalSample().
         void SetGlottalSample(const float* pcm, int32_t length, int32_t srcRate, float naturalPitchHz);
         void ClearGlottalSample();
+        bool SgPitchShift = true;
 #endif
 
         void SynthesizeFrame(Frame frame, int16_t* outputBuffer, int32_t offset);

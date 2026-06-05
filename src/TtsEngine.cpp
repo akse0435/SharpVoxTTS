@@ -355,6 +355,10 @@ namespace SharpVox {
         _glotNatHz   = 0.0f;
         _synth.ClearGlottalSample();
     }
+    void TtsEngine::SetGlottalPitchShift(bool enabled) {
+        _glotPitchShift = enabled;
+        _synth.SgPitchShift = enabled;
+    }
 #endif
 
     void TtsEngine::RebuildPipeline() {
@@ -390,6 +394,7 @@ namespace SharpVox {
         _synth.LipRounding     = _voice.LipRounding;
         _synth.ComputeGlotWave((int16_t)_voice.VGain);
 #ifdef SHARPVOX_SAMPLED_GLOT
+        _synth.SgPitchShift = _glotPitchShift;
         if (!_glotPcm.empty())
             _synth.SetGlottalSample(_glotPcm.data(), (int32_t)_glotPcm.size(), _glotSrcRate, _glotNatHz);
 #endif

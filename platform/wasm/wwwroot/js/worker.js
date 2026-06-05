@@ -49,5 +49,8 @@ self.onmessage = ({ data }) => {
         case 'ClearGlottalSample':
             instance.ClearGlottalSample();
             break;
+        case 'SetGlottalPitchShift':
+            instance.SetGlottalPitchShift(data.enabled);
+            break;
     }
 };

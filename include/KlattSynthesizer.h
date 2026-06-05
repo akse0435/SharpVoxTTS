@@ -94,6 +94,7 @@ namespace SharpVox {
 #ifdef SHARPVOX_SAMPLED_GLOT
         void SetGlottalSample(const float* pcm, int32_t length, int32_t srcRate, float naturalPitchHz);
         void ClearGlottalSample();
+        bool SgPitchShift = true;
 #endif
 
         // Synthesizes one frame with linear parameter interpolation to ensure smooth transitions.

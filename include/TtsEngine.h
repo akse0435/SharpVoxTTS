@@ -93,6 +93,7 @@ namespace SharpVox {
 #ifdef SHARPVOX_SAMPLED_GLOT
         void SetGlottalSample(const float* pcm, int32_t len, int32_t srcRate, float naturalPitchHz);
         void ClearGlottalSample();
+        void SetGlottalPitchShift(bool enabled);
 #endif
 
         void Speak(const std::string& text,
@@ -117,8 +118,9 @@ namespace SharpVox {
 #endif
 #ifdef SHARPVOX_SAMPLED_GLOT
         std::vector<float> _glotPcm;
-        int32_t _glotSrcRate  = 0;
-        float   _glotNatHz    = 0.0f;
+        int32_t _glotSrcRate    = 0;
+        float   _glotNatHz      = 0.0f;
+        bool    _glotPitchShift = true;
 #endif
 
         void ProcessSentenceStreaming(const std::vector<PhonemeToken>& tokens, int16_t endPunct,

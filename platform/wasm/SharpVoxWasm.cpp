@@ -572,6 +572,9 @@ public:
     void ClearGlottalSample() {
         _speaker.ClearGlottalSample();
     }
+    void SetGlottalPitchShift(bool enabled) {
+        _speaker.SetGlottalPitchShift(enabled);
+    }
 #endif
 
     void HandleImport(const std::string& json) {
@@ -785,8 +788,9 @@ EMSCRIPTEN_BINDINGS(sharpvox_interop) {
         .function("ConvertUst",      &SharpVoxInterop::ConvertUst)
         .function("ExportVideo",     &SharpVoxInterop::ExportVideo)
 #ifdef SHARPVOX_SAMPLED_GLOT
-        .function("SetGlottalSample",&SharpVoxInterop::SetGlottalSample)
-        .function("ClearGlottalSample",&SharpVoxInterop::ClearGlottalSample)
+        .function("SetGlottalSample",     &SharpVoxInterop::SetGlottalSample)
+        .function("ClearGlottalSample",   &SharpVoxInterop::ClearGlottalSample)
+        .function("SetGlottalPitchShift", &SharpVoxInterop::SetGlottalPitchShift)
 #endif
         ;
 }

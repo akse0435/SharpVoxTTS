@@ -44,6 +44,7 @@ public:
 #ifdef SHARPVOX_SAMPLED_GLOT
     void SetGlottalSample(const float* pcm, int32_t len, int32_t srcRate, float naturalPitchHz);
     void ClearGlottalSample();
+    void SetGlottalPitchShift(bool enabled);
 #endif
 
     int32_t Rate = 200;

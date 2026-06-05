@@ -666,6 +666,10 @@ window.ui = {
     onGlotPitchChange: (value) => {
         window.sharpVox.UpdateGlotPitch(parseFloat(value) || 120);
     },
+
+    onGlotPitchShiftChange: (checked) => {
+        window.sharpVox.SetGlottalPitchShift(checked);
+    },
 };
 
 (function () {

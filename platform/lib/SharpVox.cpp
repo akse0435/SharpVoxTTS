@@ -119,6 +119,9 @@ void SharpVoxSpeaker::SetGlottalSample(const float* pcm, int32_t len, int32_t sr
 void SharpVoxSpeaker::ClearGlottalSample() {
     _engine.ClearGlottalSample();
 }
+void SharpVoxSpeaker::SetGlottalPitchShift(bool enabled) {
+    _engine.SetGlottalPitchShift(enabled);
+}
 #endif
 
 // yep, it's a preset
