@@ -81,6 +81,14 @@ namespace SharpVox {
 
         void ComputeGlotWave(int16_t vGain);
 
+#ifdef SHARPVOX_SAMPLED_GLOT
+        // Load a glottal source sample. pcm is mono float [-1,1] at srcRate Hz.
+        // naturalPitchHz is the F0 of the source; playback speed scales by targetF0/naturalPitchHz.
+        // Resamples to the synth rate internally. Replaces the polynomial until ClearGlottalSample().
+        void SetGlottalSample(const float* pcm, int32_t length, int32_t srcRate, float naturalPitchHz);
+        void ClearGlottalSample();
+#endif
+
         void SynthesizeFrame(Frame frame, int16_t* outputBuffer, int32_t offset);
 
         void Calc_Pole_Coefficients(float& Acoeff, float& Bcoeff, float& Ccoeff,
@@ -156,6 +164,14 @@ namespace SharpVox {
         float   _glotInvNe_f;   // 1.0f / _Ne_fp
         float   _chorusInvNe_f;
         float   _voiceGain_f;   // vGain * 288.0f (matches float synth _lfGain)
+
+#ifdef SHARPVOX_SAMPLED_GLOT
+        std::vector<float> _sgBuf;     // resampled glottal source, normalised to max|x|=1
+        float   _sgNatPitchHz;         // natural F0 of the source
+        float   _sgPhase;              // current read position in [0, _sgBuf.size())
+        int32_t _sgBufSize;            // cached (int)_sgBuf.size()
+        bool    _useSampledGlot;
+#endif
 
         // Precomputed (1<<24)/sampleRate in Q4 for integer glotPhaseInc calculation.
         int32_t _phaseIncPerHz_q4;

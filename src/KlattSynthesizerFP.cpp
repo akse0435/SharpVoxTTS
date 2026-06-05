@@ -155,6 +155,12 @@ KlattSynthesizerFP::KlattSynthesizerFP(int32_t sampleRate) {
     _Ne_fp = _chorusNe_fp = 655360;
     _glotInvNe_f = _chorusInvNe_f = 1.0f / 655360.0f;
     _voiceGain_f = 0.0f;
+#ifdef SHARPVOX_SAMPLED_GLOT
+    _useSampledGlot = false;
+    _sgNatPitchHz = 1.0f;
+    _sgPhase = 0.0f;
+    _sgBufSize = 0;
+#endif
 
     _shimmerScale=1.0f; _diploScale=1.0f;
     _cycleCount=0; _fryStallSamples=0;
@@ -263,7 +269,41 @@ void KlattSynthesizerFP::ComputeGlotWave(int16_t vGain) {
     _voiceGain_f   = (vGain > 0) ? (vGain * 288.0f) : 0.0f;
 }
 
-//  AdjFormant / NextNoise 
+#ifdef SHARPVOX_SAMPLED_GLOT
+
+void KlattSynthesizerFP::SetGlottalSample(const float* pcm, int32_t length,
+                                           int32_t srcRate, float naturalPitchHz) {
+    float ratio = (float)_sampleRate / (float)srcRate;
+    int32_t outLen = std::max(2, (int32_t)roundf((float)length * ratio));
+    _sgBuf.resize(outLen);
+    float invRatio = 1.0f / ratio;
+    for (int32_t i = 0; i < outLen; i++) {
+        float srcPos = (float)i * invRatio;
+        int32_t s0 = (int32_t)srcPos;
+        int32_t s1 = std::min(s0 + 1, length - 1);
+        float frac = srcPos - (float)s0;
+        _sgBuf[i] = pcm[s0] + frac * (pcm[s1] - pcm[s0]);
+    }
+    float maxAbs = 0.0f;
+    for (float v : _sgBuf) { float a = v < 0 ? -v : v; if (a > maxAbs) maxAbs = a; }
+    if (maxAbs > 0.0f) { float inv = 1.0f / maxAbs; for (float& v : _sgBuf) v *= inv; }
+    _sgNatPitchHz = (naturalPitchHz > 0.0f) ? naturalPitchHz : 1.0f;
+    _sgBufSize    = outLen;
+    _sgPhase      = 0.0f;
+    _useSampledGlot = true;
+}
+
+void KlattSynthesizerFP::ClearGlottalSample() {
+    _useSampledGlot = false;
+    _sgBuf.clear();
+    _sgBuf.shrink_to_fit();
+    _sgBufSize = 0;
+    _sgPhase   = 0.0f;
+}
+
+#endif // SHARPVOX_SAMPLED_GLOT
+
+//  AdjFormant / NextNoise
 
 int16_t KlattSynthesizerFP::AdjFormant(int16_t pitch, int32_t formant) {
     if (LarynxOffset==0 && PharyngealAmt==0 && LipRounding==0) return pitch;
@@ -356,6 +396,9 @@ void KlattSynthesizerFP::SynthesizeFrame(Frame frame, int16_t* outputBuffer, int
         _glotPhase=0; _chorusPhase=0;
         _shimmerScale=1.0f; _diploScale=1.0f;
         _cycleCount=0; _fryStallSamples=0;
+#ifdef SHARPVOX_SAMPLED_GLOT
+        _sgPhase=0.0f;
+#endif
         _sgD1=_sgD2=0;
         _f1D1=_f1D2=_f2D1=_f2D2=_f3D1=_f3D2=_f4D1=_f4D2=_f5cD1=_f5cD2=0;
         _npD1=_npD2=_nzD1=_nzD2=0;
@@ -544,6 +587,17 @@ void KlattSynthesizerFP::SynthesizeFrame(Frame frame, int16_t* outputBuffer, int
                     }
                 }
 
+#ifdef SHARPVOX_SAMPLED_GLOT
+                if (_useSampledGlot && _sgBufSize > 0) {
+                    _sgPhase += (float)effF0Hz / _sgNatPitchHz;
+                    if (_sgPhase >= (float)_sgBufSize) _sgPhase -= (float)_sgBufSize;
+                    int32_t idx  = (int32_t)_sgPhase;
+                    float   frac = _sgPhase - (float)idx;
+                    int32_t idx1 = idx + 1 < _sgBufSize ? idx + 1 : 0;
+                    float s = _sgBuf[idx] + frac * (_sgBuf[idx1] - _sgBuf[idx]);
+                    glotSample = (int32_t)(s * _voiceGain_f);
+                } else
+#endif
                 {
                     int32_t phi = (int32_t)_glotPhase;
                     float tau = (float)phi * _glotInvNe_f;
@@ -551,7 +605,11 @@ void KlattSynthesizerFP::SynthesizeFrame(Frame frame, int16_t* outputBuffer, int
                         ? (int32_t)(tau * (0.33333333f - tau * 0.5f) * _voiceGain_f)
                         : 0;
                 }
+#ifdef SHARPVOX_SAMPLED_GLOT
+                if (VoiceChorus != 0 && !_useSampledGlot) {
+#else
                 if (VoiceChorus != 0) {
+#endif
                     _chorusPhase = (_chorusPhaseInc+_chorusPhase) & 0xFFFFFF;
                     int32_t phi2 = (int32_t)_chorusPhase;
                     float tau2 = (float)phi2 * _chorusInvNe_f;
