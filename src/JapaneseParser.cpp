@@ -269,20 +269,40 @@ namespace SharpVox {
         bool wordStart = true;
         int16_t lastVowel = -1;
         size_t firstSecondaryIdx = (size_t)-1;
+        int32_t consAccum = 0;
+        bool    gemClosure = false;
+
+        // Intrinsic consonant duration (ms) within a 120ms mora budget.
+        auto ConsDurMs = [](uint8_t phon) -> int16_t {
+            if (phon == J_DX)                             return 25;
+            if (phon == J_Y)                              return 15;
+            if (phon == J_W)                              return 20;
+            if (phon == J_N || phon == J_M || phon == J_NG) return 45;
+            if (phon == J_HH)                             return 35;
+            if (phon == J_Z)                              return 50;
+            if (phon == J_SH || phon == J_S || phon == J_F) return 55;
+            if (phon == J_JH || phon == J_CH)             return 65;
+            return 45;  // stops: K G T D B P V
+        };
 
         auto EmitCons = [&](uint8_t phon) {
             PhonemeToken tok;
             tok.Phon = (int16_t)phon;
-            tok.Ctrl = AudioProcessor::kContent_Word;
+            tok.Ctrl = AudioProcessor::kContent_Word | AudioProcessor::kJapaneseMora;
             if (wordStart) { tok.Ctrl |= AudioProcessor::kWord_Start; wordStart = false; }
+            int16_t d = gemClosure ? (int16_t)120 : ConsDurMs(phon);
+            tok.UserDur = d;
+            consAccum += d;
             out.push_back(tok);
         };
 
         auto EmitVowel = [&](int16_t phon) {
             PhonemeToken tok;
             tok.Phon = phon;
-            tok.Ctrl = AudioProcessor::kContent_Word | AudioProcessor::kSecondaryStress;
+            tok.Ctrl = AudioProcessor::kContent_Word | AudioProcessor::kSecondaryStress | AudioProcessor::kJapaneseMora;
             if (wordStart) { tok.Ctrl |= AudioProcessor::kWord_Start; wordStart = false; }
+            tok.UserDur = (int16_t)std::max(30, 120 - consAccum);
+            consAccum = 0;
             if (firstSecondaryIdx == (size_t)-1) firstSecondaryIdx = out.size();
             out.push_back(tok);
             lastVowel = phon;
@@ -305,7 +325,11 @@ namespace SharpVox {
 
             // Syllabic N (ん): context-sensitive nasal assimilation
             if (m.vowel == JP_SYLLABIC_N) {
-                if (geminate) { EmitCons(J_N); geminate = false; }
+                if (geminate) {
+                    gemClosure = true; EmitCons(J_N); gemClosure = false;
+                    consAccum = 0;
+                    geminate = false;
+                }
                 uint8_t nasal = J_N;
                 if (ci + 1 < cps.size()) {
                     Mora nm = LookupMora(cps[ci + 1]);
@@ -321,7 +345,11 @@ namespace SharpVox {
                 if (ci + 1 < cps.size() && IsSmallYoon(cps[ci + 1])) {
                     uint32_t next_cp = cps[++ci];
                     int16_t yv = SmallYoonVowel(next_cp);
-                    if (geminate && m.c1 != 0xFF) { EmitCons(m.c1); geminate = false; }
+                    if (geminate && m.c1 != 0xFF) {
+                        gemClosure = true; EmitCons(m.c1); gemClosure = false;
+                        consAccum = 0;
+                        geminate = false;
+                    }
                     if (m.c1 != 0xFF) EmitCons(m.c1);
                     if (!m.palatalized) EmitCons(J_Y);
                     EmitVowel(yv);
@@ -330,7 +358,11 @@ namespace SharpVox {
             }
 
             // Normal mora
-            if (geminate && m.c1 != 0xFF) { EmitCons(m.c1); geminate = false; }
+            if (geminate && m.c1 != 0xFF) {
+                gemClosure = true; EmitCons(m.c1); gemClosure = false;
+                consAccum = 0;
+                geminate = false;
+            }
             if (m.c1 != 0xFF) EmitCons(m.c1);
             if (m.c2 != 0xFF) EmitCons(m.c2);
             EmitVowel((int16_t)m.vowel);

@@ -1230,6 +1230,17 @@ namespace SharpVox {
                 goto DURATION_DONE_END;
             }
 
+            // Japanese mora-timed duration (Port et al. 1987)
+            if ((curCtrl & kJapaneseMora) != 0) {
+                int32_t targetMs = _userDurBuf2[i];
+                if (_speechRate != kNormal_Speech_Rate) {
+                    targetMs = (int32_t)((targetMs * _rateRatio) >> 16);
+                }
+                int32_t d = targetMs / kFrameTime;
+                _durBuf[i] = (int16_t)std::max(d, (int32_t)1);
+                goto DURATION_DONE_END;
+            }
+
             // Pause insertion
             if (curPhon == _SIL_ && (curCtrl & kSingingDuration) == 0) {
                 int32_t tempS = (int32_t)((curCtrl & kSilenceTypeField) >> kSilenceTypeShift);

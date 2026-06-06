@@ -131,6 +131,7 @@ namespace SharpVox {
         static constexpr int64_t kCompoundNoun                  = 0x8000L;
         static constexpr int64_t kStressedWInitial              = kIsStressed | kWord_Initial_Consonant;
         static constexpr int64_t kSampleMarker                  = 0x02000000L;
+        static constexpr int64_t kJapaneseMora                  = 0x100000000LL;
 
         // BND types for silence, index into BoundaryDurationTable
         static constexpr int32_t kBND_Pause    = 1;
