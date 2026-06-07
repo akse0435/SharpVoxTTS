@@ -191,6 +191,20 @@ namespace SharpVox {
         return J_AO; // 0x3087
     }
 
+    // Small vowel modifiers (loanword combos: fa, ti, di, wi, tsa, etc.)
+    // These are the small forms: small-a/i/u/e/o (0x3041/3043/3045/3047/3049).
+    static bool IsSmallVowelMod(uint32_t cp) {
+        return cp == 0x3041 || cp == 0x3043 || cp == 0x3045 || cp == 0x3047 || cp == 0x3049;
+    }
+
+    static int16_t SmallVowelModVowel(uint32_t cp) {
+        if (cp == 0x3041) return J_AA;
+        if (cp == 0x3043) return J_IY;
+        if (cp == 0x3045) return J_UH;
+        if (cp == 0x3047) return J_EH;
+        return J_AO; // 0x3049
+    }
+
     // Returns the vowel quality ('a','i','u','e','o') at the end of the mora at cps[i].
     // peek is cps[i+1] — needed to detect yoon compounds.
     static char MoraEndVowelQuality(uint32_t cp, uint32_t peek) {
@@ -215,14 +229,16 @@ namespace SharpVox {
 
     // True when cp is a bare hiragana vowel that lengthens a mora of quality prevQ.
     // Rules: same vowel repeats; ou -> o:; ei -> e:
+    // Small forms (0x3041/3043/3045/3047/3049) are excluded: they are loanword modifiers,
+    // not lengthening vowels, and matching them here corrupts e.g. ti (te+small-i) to te:.
     static bool IsLengtheningVowel(char prevQ, uint32_t cp) {
         if (prevQ == 0) return false;
         char q = 0;
-        if (cp == 0x3041 || cp == 0x3042) q = 'a';
-        else if (cp == 0x3043 || cp == 0x3044) q = 'i';
-        else if (cp == 0x3045 || cp == 0x3046) q = 'u';
-        else if (cp == 0x3047 || cp == 0x3048) q = 'e';
-        else if (cp == 0x3049 || cp == 0x304A) q = 'o';
+        if (cp == 0x3042) q = 'a';
+        else if (cp == 0x3044) q = 'i';
+        else if (cp == 0x3046) q = 'u';
+        else if (cp == 0x3048) q = 'e';
+        else if (cp == 0x304A) q = 'o';
         else return false;
         return (prevQ == q) || (prevQ == 'o' && q == 'u') || (prevQ == 'e' && q == 'i');
     }
@@ -344,19 +360,44 @@ namespace SharpVox {
                 continue;
             }
 
-            // Yoon lookahead
-            if (m.yoon_base) {
-                if (ci + 1 < cps.size() && IsSmallYoon(cps[ci + 1])) {
-                    uint32_t next_cp = cps[++ci];
-                    int16_t yv = SmallYoonVowel(next_cp);
+            // Yoon / small-vowel-modifier lookahead
+            if (ci + 1 < cps.size()) {
+                uint32_t next_cp = cps[ci + 1];
+                if (m.yoon_base && IsSmallYoon(next_cp)) {
+                    int16_t yv = SmallYoonVowel(next_cp); ci++;
                     if (geminate && m.c1 != 0xFF) {
                         gemClosure = true; EmitCons(m.c1); gemClosure = false;
-                        consAccum = 0;
-                        geminate = false;
+                        consAccum = 0; geminate = false;
                     }
                     if (m.c1 != 0xFF) EmitCons(m.c1);
                     if (!m.palatalized) EmitCons(J_Y);
                     EmitVowel(yv);
+                    continue;
+                }
+                if (IsSmallVowelMod(next_cp)) {
+                    int16_t sv = SmallVowelModVowel(next_cp); ci++;
+                    if (geminate && m.c1 != 0xFF) {
+                        gemClosure = true; EmitCons(m.c1); gemClosure = false;
+                        consAccum = 0; geminate = false;
+                    }
+                    // bare u (0x3046) + small i/e/o -> w + vowel (wi, we, wo)
+                    if (cp == 0x3046 && sv != J_UH) {
+                        EmitCons(J_W); EmitVowel(sv); continue;
+                    }
+                    // bare i (0x3044) + small e -> y + e (ye)
+                    if (cp == 0x3044 && sv == J_EH) {
+                        EmitCons(J_Y); EmitVowel(J_EH); continue;
+                    }
+                    if (m.c1 != 0xFF) {
+                        EmitCons(m.c1);
+                        if (m.c2 != 0xFF) EmitCons(m.c2);
+                        // yoon_base + small vowel mod: insert Y glide unless palatalized
+                        if (m.yoon_base && !m.palatalized) EmitCons(J_Y);
+                        EmitVowel(sv);
+                        continue;
+                    }
+                    // fallback: bare vowel + same-quality small mod -> emit base
+                    EmitVowel((int16_t)m.vowel);
                     continue;
                 }
             }
