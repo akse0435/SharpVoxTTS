@@ -1,5 +1,6 @@
 CXX      := g++
-CXXFLAGS := -std=c++11 -O2 -Wall -Wextra -Iinclude -fPIC -DSHARPVOX_FIXED_POINT_SYNTH
+# -MMD -MP emits .d header dependency files so edits to include/ trigger rebuilds
+CXXFLAGS := -std=c++11 -O2 -Wall -Wextra -Iinclude -fPIC -DSHARPVOX_FIXED_POINT_SYNTH -MMD -MP
 LDFLAGS  :=
 LDLIBS   := -lm
 
@@ -109,6 +110,8 @@ platform/cli/%.o: platform/cli/%.cpp
 platform/lib/%.o: platform/lib/%.cpp
 	$(CXX) $(CXXFLAGS) -fPIC -c $< -o $@
 
+-include $(LIB_OBJS:.o=.d) $(CLI_OBJS:.o=.d) $(SHLIB_OBJS:.o=.d)
+
 wasm:
 	$(EMCC) $(EMCCFLAGS) $(WASM_SRCS) -o $(WASM_OUT)
 
@@ -117,5 +120,6 @@ wasm-host: wasm
 
 clean:
 	rm -f $(LIB_OBJS) $(CLI_OBJS) $(SHLIB_OBJS) $(CLI_BIN) $(SHLIB) $(ARCHIVE)
+	rm -f $(LIB_OBJS:.o=.d) $(CLI_OBJS:.o=.d) $(SHLIB_OBJS:.o=.d)
 	rm -rf $(FP_BUILD_DIR)
 	rm -f $(WASM_OUT) platform/wasm/wwwroot/js/sharpvox.wasm
