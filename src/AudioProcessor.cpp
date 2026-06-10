@@ -1847,11 +1847,13 @@ namespace SharpVox {
                 // kPitchFall1 (function word, H*-like): tilt -51, peak +40ms from vowel onset,
                 //   same alignment formula as the nuclear H* (Taylor 2000).
                 if ((curCtrl & kPitchRise1) != 0) {
-                    int16_t raiseAmt1 = _vpRiseAmt1;
+                    int16_t peak1 = _vpRiseAmt1;
                     if (_endPunctuation == _Quest_ || _endPunctuation == _Tilde_) {
-                        raiseAmt1 >>= 1;
+                        peak1 >>= 1;
                     }
-                    StoreTiltEvent(raiseAmt1, +20, curDur, 0, kPitchRiseFall1_Flg);
+                    // Peak-targeting hat: amp 3p/2 with tilt +21 decomposes to an
+                    // absolute peak of ~p and a landing plateau of ~p/2 (MITalk 2:1).
+                    StoreTiltEvent((int16_t)(peak1 * 3 / 2), +21, curDur, 0, kPitchRiseFall1_Flg);
                 } else if ((curCtrl & kPitchFall1) != 0) {
                     int16_t fallAmt1 = _vpFallAmt1;
                     int16_t dRise1 = (int16_t)(curDur * (64 - 51) / 128);
@@ -1924,24 +1926,32 @@ namespace SharpVox {
                     }
 
                     // Japanese: pure-fall with rise compensation; legacy timeT formula.
-                    // English: single H* nuclear event, tilt encodes accent shape (Taylor 2000).
-                    // timeT is computed so the peak (end of rise phase) lands at +40ms from
-                    // nucleus onset: timeT = 40ms - dRise, where dRise = curDur*(1+tilt)/2.
-                    // H* peak at +40ms is Taylor's measured mean for declarative accents.
+                    // English: peak-targeting nuclear hat. The event rises to the same
+                    // absolute peak line as the head accents (RiseAmt1) and plunges to
+                    // an absolute floor of fallAmt below the baseline (MITalk Tune A
+                    // constant terminal value). amp and tilt encode (peak, floor) for
+                    // the RFC decomposition in FireTiltEvent.
                     if ((curCtrl & kJapaneseMora) != 0) {
                         int16_t timeT = (int16_t)(curDur - (160 / kFrameTime));
                         if (timeT < 25 / kFrameTime) timeT = (int16_t)(25 / kFrameTime);
                         fallAmt = (int16_t)(((int64_t)_vpAssertiveness * fallAmt >> 16) - _vpRiseAmt);
                         StoreTiltEvent((int16_t)(-fallAmt), -64, curDur, timeT, kPitchRiseFall_Flg);
                     } else {
-                        int16_t nucTilt = (_endPunctuation == _Quest_ || _endPunctuation == _Tilde_)
-                            ? (int16_t)(-20)
-                            : (int16_t)(-51);
-                        int16_t dRise = (int16_t)(curDur * (64 + nucTilt) / 128);
-                        int16_t timeT = (int16_t)((40 / kFrameTime) - dRise);
-                        if (timeT < 0) timeT = (int16_t)0;
-                        fallAmt = (int16_t)(((int64_t)_vpAssertiveness * fallAmt >> 16));
-                        StoreTiltEvent((int16_t)(-fallAmt), nucTilt, curDur, timeT, kPitchRiseFall_Flg);
+                        int16_t nucPeak = _vpRiseAmt1;
+                        if (_endPunctuation == _Quest_ || _endPunctuation == _Tilde_) {
+                            nucPeak >>= 1;
+                        }
+                        int16_t floorDepth = (int16_t)((int64_t)_vpAssertiveness * (0 - fallAmt) >> 16);
+                        if (floorDepth > 0) {
+                            // aRise + aFall = amp; solve for aRise = peak, landing = -floorDepth.
+                            int16_t amp = (int16_t)(2 * nucPeak + floorDepth);
+                            int16_t nucTilt = (int16_t)(0 - (64 * floorDepth) / amp);
+                            int16_t dRise = (int16_t)(curDur * (64 + nucTilt) / 128);
+                            int16_t timeT = (int16_t)((40 / kFrameTime) - dRise);
+                            if (timeT < 0) timeT = (int16_t)0;
+                            StoreTiltEvent(amp, nucTilt, curDur, timeT, kPitchRiseFall_Flg);
+                        }
+                        fallAmt = (int16_t)(0 - floorDepth);
                     }
                     curBaseline += fallAmt;
                     pitchIsFallen = true;

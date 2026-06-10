@@ -314,12 +314,6 @@ namespace SharpVox {
         int32_t dRise = duration * (64 + tiltX64) / 128;
         int32_t dFall = duration * (64 - tiltX64) / 128;
 
-        // Nuclear events (kPitchRiseFall_Flg) update _tiltHeldLevel permanently.
-        // Head events (kPitchRiseFall1_Flg) step it up by aRise - aFall: the MITalk
-        // hat pattern (O'Shaughnessy 1976) rises 40 pct and falls only 20 pct of the
-        // line-to-peak distance, so the contour holds an elevated plateau between
-        // accents instead of returning to baseline.
-        // Transient events (stress, pronoun) restore _tiltHeldLevel afterwards.
         bool isNuclear = (flags & kPitchRiseFall_Flg) != 0;
         bool isStepping = isNuclear || (flags & kPitchRiseFall1_Flg) != 0;
 
@@ -328,36 +322,58 @@ namespace SharpVox {
         // Sample the current excursion so new events can start from wherever the
         // curve is right now.  This eliminates audible discontinuities when a new
         // event fires mid-curve, regardless of whether the incoming event is nuclear
-        // or transient.  Endpoints (_tiltAbs / _tiltFallAbs) are always anchored to
-        // _tiltHeldLevel so the nuclear accent level is preserved after completion.
+        // or transient.
         int32_t curExcursion = _tiltPhase != 0
             ? TiltSynth(_tiltA, _tiltAbs, _tiltFrame, _tiltPhaseDur)
             : held;
 
+        // Peak-targeting accents (MITalk declination lines, DECtalk geometry):
+        // for stepping rise+fall events, aRise is an absolute peak above the phrase
+        // floor and aRise - aFall is the absolute landing level.  The realized rise
+        // shrinks as the plateau ratchets up, so peaks ride a near-flat line while
+        // valleys climb, instead of every accent re-rising by a fixed amount.
+        // Head events land near half the peak (MITalk 2:1 rise:fall hat); nuclear
+        // events land below the baseline (Tune A constant terminal value).
+        if (isStepping && aRise > 0 && dRise > 0 && aFall > 0 && dFall > 0) {
+            int32_t landing = aRise - aFall;
+            if (aRise > curExcursion) {
+                _tiltPhase = 1; // RISE
+                _tiltFrame = 0;
+                _tiltPhaseDur = dRise;
+                _tiltAbs = aRise;
+                _tiltA = curExcursion - aRise;
+                _tiltFallPending = true;
+                _tiltFallDur = dFall;
+                _tiltFallAbs = landing;
+                _tiltFallA = aRise - landing;
+            } else {
+                // Already at or above the peak: skip the rise, fall to the landing level.
+                _tiltPhase = 2; // FALL
+                _tiltFrame = 0;
+                _tiltPhaseDur = dFall;
+                _tiltAbs = landing;
+                _tiltA = curExcursion - landing;
+                _tiltFallPending = false;
+            }
+            return;
+        }
+
+        // Remaining event types keep level-relative semantics: transient events
+        // (stress, pronoun) bump off the current excursion and return to the held
+        // plateau; Japanese mora events are pure rises and pure falls whose paired
+        // amplitudes step the held level up and back down.
         if (aRise > 0 && dRise > 0) {
             _tiltPhase = 1; // RISE
             _tiltFrame = 0;
             _tiltPhaseDur = dRise;
             _tiltA = -aRise;
-            // Transient events start from the current excursion for continuity.
-            // Stepping events anchor to _tiltHeldLevel so plateau bookkeeping stays exact.
             _tiltAbs = (isStepping ? held : curExcursion) + aRise;
 
             if (aFall > 0 && dFall > 0) {
                 _tiltFallPending = true;
                 _tiltFallDur = dFall;
-                if (isNuclear) {
-                    // Nuclear fall lands at an absolute floor, consuming the accumulated
-                    // hat plateau with a correspondingly sharper final fall (MITalk Tune A:
-                    // the last fall always reaches the same low terminal value).
-                    _tiltFallAbs = aRise - aFall;
-                } else if (isStepping) {
-                    _tiltFallAbs = held + aRise - aFall;
-                } else {
-                    _tiltFallAbs = held;
-                }
-                // Fall starts where the rise ends, whatever the endpoint target is.
-                _tiltFallA = _tiltAbs - _tiltFallAbs;
+                _tiltFallAbs = held;
+                _tiltFallA = _tiltAbs - held;
             } else {
                 _tiltFallPending = false;
             }
