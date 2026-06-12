@@ -32,10 +32,10 @@ namespace SharpVox {
     //   Phonemizer (text -> PhonemeToken[]) -> AudioProcessor (phoneme processing) ->
     //   SpeechRenderer (formant targets) -> KlattSynthesizer (PCM samples).
     //
-    // The streaming async path pre-computes all ClausePlans upfront so latency to
-    // first audio is bounded by the front-end processing time, not the synthesis time.
-    // Each sentence or clause gets its own AudioProcessor.Process() call so pitch and
-    // duration resets happen at natural boundaries.
+    // Both speak paths stream clause by clause, so memory is bounded by the longest
+    // clause rather than the whole input. Each sentence or clause gets its own
+    // AudioProcessor.Process() call so pitch and duration resets happen at natural
+    // boundaries.
     class TtsEngine {
     public:
         static const int32_t DefaultSampleRate = 22050;
@@ -101,10 +101,13 @@ namespace SharpVox {
                    void (*onBuffer)(const int16_t* buf, int32_t len, void* userdata),
                    void* userdata = nullptr);
 
+        // Streams audio chunks together with the phoneme events whose onsets fall
+        // inside each chunk (often 0 or 1). TimeSeconds stays absolute from the start
+        // of the utterance, so consumers can rebuild the full timeline by appending.
         void SpeakWithEvents(
             const std::string& text,
-            void (*onBuffer)(const int16_t* buf, int32_t len, void* userdata),
-            void (*onEventsReady)(const PhonemeEvent* events, int32_t count, void* userdata),
+            void (*onChunk)(const int16_t* buf, int32_t len,
+                            const PhonemeEvent* events, int32_t count, void* userdata),
             void* userdata = nullptr);
 
     private:
@@ -133,6 +136,10 @@ namespace SharpVox {
 
 
         void ApplyCommand(const EmbeddedCmd::VoiceCommand& cmd);
+
+        // Resets renderer and synth to a fresh state for the current voice without
+        // touching AudioProcessor clause-transition state.
+        void ResetSynthVoice();
 
         void RebuildPipeline();
     };

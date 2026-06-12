@@ -277,8 +277,10 @@ public:
             struct Ctx { SharpVoxInterop* self; int32_t totalSamples; };
             Ctx ctx { this, 0 };
 
+            js_init_audio(_sampleRate);
             _speaker.SpeakWithEvents(buildSynText(text),
-                [](SharpVoxSpeaker* /*speaker*/, const int16_t* buf, int32_t len, void* ud) {
+                [](SharpVoxSpeaker* /*speaker*/, const int16_t* buf, int32_t len,
+                   const PhonemeEvent* /*events*/, int32_t /*count*/, void* ud) {
                     auto* c = static_cast<Ctx*>(ud);
                     if (std::fabs(c->self->_outputVolume - 1.0f) > 0.001f) {
                         std::vector<int16_t> chunk(buf, buf + len);
@@ -289,13 +291,11 @@ public:
                     }
                     c->totalSamples += len;
                 },
-                [](SharpVoxSpeaker* /*speaker*/, const PhonemeEvent* events, int32_t count, void* ud) {
-                    auto* c = static_cast<Ctx*>(ud);
-                    c->self->buildPhonemeJson(events, count);
-                    js_init_audio(c->self->_sampleRate);
-                    js_update_phonemes(c->self->_codesJson.c_str(), -1);
-                },
                 &ctx);
+
+            const auto& allEvents = _speaker.PhonemeEvents();
+            buildPhonemeJson(allEvents.data(), (int32_t)allEvents.size());
+            js_update_phonemes(_codesJson.c_str(), -1);
 
             char status[128];
             int ms = _sampleRate > 0 ? (int)((int64_t)ctx.totalSamples * 1000 / _sampleRate) : 0;
@@ -375,13 +375,10 @@ public:
             Ctx ctx { this, &samples };
 
             _speaker.SpeakWithEvents(buildSynText(text),
-                [](SharpVoxSpeaker* /*speaker*/, const int16_t* buf, int32_t len, void* ud) {
+                [](SharpVoxSpeaker* /*speaker*/, const int16_t* buf, int32_t len,
+                   const PhonemeEvent* /*events*/, int32_t /*count*/, void* ud) {
                     auto* c = static_cast<Ctx*>(ud);
                     c->samples->insert(c->samples->end(), buf, buf + len);
-                },
-                [](SharpVoxSpeaker* /*speaker*/, const PhonemeEvent* events, int32_t count, void* /*ud*/) {
-                    // events processed below after SpeakWithEvents returns
-                    (void)events; (void)count;
                 },
                 &ctx);
 
@@ -450,11 +447,11 @@ public:
 
             std::vector<int16_t> samples;
             _speaker.SpeakWithEvents(text,
-                [](SharpVoxSpeaker* /*speaker*/, const int16_t* buf, int32_t len, void* ud) {
+                [](SharpVoxSpeaker* /*speaker*/, const int16_t* buf, int32_t len,
+                   const PhonemeEvent* /*events*/, int32_t /*count*/, void* ud) {
                     auto* s = static_cast<std::vector<int16_t>*>(ud);
                     s->insert(s->end(), buf, buf + len);
                 },
-                [](SharpVoxSpeaker* /*speaker*/, const PhonemeEvent* /*events*/, int32_t /*count*/, void* /*ud*/) {},
                 &samples);
 
             std::string codesJson = "[", timesJson = "[";

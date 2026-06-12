@@ -183,23 +183,52 @@ namespace SharpVox {
 
     void TtsEngine::SpeakWithEvents(
         const std::string& text,
-        void (*onBuffer)(const int16_t*, int32_t, void*),
-        void (*onEventsReady)(const PhonemeEvent*, int32_t, void*),
+        void (*onChunk)(const int16_t*, int32_t, const PhonemeEvent*, int32_t, void*),
         void* userdata) {
-        auto cb = [onBuffer, userdata](const int16_t* buf, int32_t len) {
-            onBuffer(buf, len, userdata);
-        };
-
-        struct WorkItem {
-            ClausePlan plan;
-            VoiceData voice;
-        };
-
-        std::vector<PhonemeEvent> events;
-        std::vector<WorkItem> workItems;
         int32_t sampleOffset = 0;
-        _klattsch.Reset(_voice);
+        bool rendered = false;
 
+        // Renders one clause plan, slicing its events into the chunks they fall in.
+        auto speakPlan = [&](const ClausePlan& plan, bool wordStarts) {
+            std::vector<PhonemeEvent> events;
+            std::vector<int32_t> onsets;
+            int32_t frameOff = 0;
+            for (int32_t i = 0; i < plan.PhonBufInIndex; i++) {
+                int16_t phon = plan.PhonBuf[i];
+                bool emitSil = phon == _SIL_ && (i == 0 || plan.PhonBuf[i - 1] != _SIL_);
+                if (phon != _SIL_ || emitSil) {
+                    int32_t onset = sampleOffset + frameOff * _synth.SampFrameLen;
+                    bool ws = wordStarts && phon != _SIL_ &&
+                        (plan.PhonCtrlBuf[i] & kWord_Start) != 0;
+                    events.emplace_back(phon, (float)onset / SampleRate, ws);
+                    onsets.push_back(onset);
+                }
+                frameOff += plan.DurBuf[i];
+            }
+            int32_t planEnd = sampleOffset + frameOff * _synth.SampFrameLen;
+            size_t cursor = 0;
+
+            // Fresh renderer/synth per clause, matching the previous batched behavior.
+            ResetSynthVoice();
+            rendered = true;
+            ProcessSentenceStreamingFromPlan(plan, [&](const int16_t* buf, int32_t len) {
+                size_t first = cursor;
+                // zero-duration tail events sit exactly on planEnd; flush with the final chunk
+                int32_t limit = sampleOffset + len;
+                if (limit >= planEnd) { limit = planEnd + 1; }
+                while (cursor < onsets.size() && onsets[cursor] < limit) { cursor++; }
+                onChunk(buf, len, events.data() + first, (int32_t)(cursor - first), userdata);
+                sampleOffset += len;
+            });
+            if (cursor < onsets.size()) {
+                // plan produced no audio frames; deliver its events with an empty chunk
+                static const int16_t kEmpty = 0;
+                onChunk(&kEmpty, 0, events.data() + cursor,
+                    (int32_t)(onsets.size() - cursor), userdata);
+            }
+        };
+
+        _klattsch.Reset(_voice);
         auto segments = EmbeddedCmd::ParseSegments(text, &_klattsch);
         size_t lastContent = segments.size();
         for (size_t i = segments.size(); i-- > 0; )
@@ -212,39 +241,14 @@ namespace SharpVox {
 
             if (seg.IsKlattsch()) {
                 auto tokens = _klattsch.CompileToTokens(KlattschParser::Tokenize(seg.klattschText));
-                if (tokens.empty()) {
-                    continue;
+                if (!tokens.empty()) {
+                    speakPlan(_be.Process(tokens, 0), false);
                 }
-                auto plan = _be.Process(tokens, 0);
-                int32_t frameOff = 0;
-                for (int32_t i = 0; i < plan.PhonBufInIndex; i++) {
-                    int16_t phon = plan.PhonBuf[i];
-                    bool emitSil = phon == _SIL_ && (i == 0 || plan.PhonBuf[i - 1] != _SIL_);
-                    if (phon != _SIL_ || emitSil) {
-                        events.emplace_back(phon,
-                            (float)(sampleOffset + frameOff * _synth.SampFrameLen) / SampleRate);
-                    }
-                    frameOff += plan.DurBuf[i];
-                }
-                sampleOffset += frameOff * _synth.SampFrameLen;
-                workItems.push_back({std::move(plan), _voice});
                 continue;
             }
 
             if (seg.IsSinging()) {
-                auto plan = _be.ProcessSinging(seg.singing);
-                int32_t frameOff = 0;
-                for (int32_t i = 0; i < plan.PhonBufInIndex; i++) {
-                    int16_t phon = plan.PhonBuf[i];
-                    bool emitSil = phon == _SIL_ && (i == 0 || plan.PhonBuf[i - 1] != _SIL_);
-                    if (phon != _SIL_ || emitSil) {
-                        events.emplace_back(phon,
-                            (float)(sampleOffset + frameOff * _synth.SampFrameLen) / SampleRate);
-                    }
-                    frameOff += plan.DurBuf[i];
-                }
-                sampleOffset += frameOff * _synth.SampFrameLen;
-                workItems.push_back({std::move(plan), _voice});
+                speakPlan(_be.ProcessSinging(seg.singing), false);
                 continue;
             }
 
@@ -252,30 +256,12 @@ namespace SharpVox {
                     [&](const std::vector<PhonemeToken>& tokens, int16_t endPunct, bool isLast) {
                 if (endPunct == 0 && si == lastContent && isLast)
                     endPunct = _Period_;
-                auto plan = _be.Process(tokens, endPunct);
-                int32_t frameOff = 0;
-                for (int32_t i = 0; i < plan.PhonBufInIndex; i++) {
-                    int16_t phon = plan.PhonBuf[i];
-                    bool emitSil = phon == _SIL_ && (i == 0 || plan.PhonBuf[i - 1] != _SIL_);
-                    if (phon != _SIL_ || emitSil) {
-                        events.emplace_back(phon,
-                            (float)(sampleOffset + frameOff * _synth.SampFrameLen) / SampleRate,
-                            phon != _SIL_ && (plan.PhonCtrlBuf[i] & kWord_Start) != 0);
-                    }
-                    frameOff += plan.DurBuf[i];
-                }
-                sampleOffset += frameOff * _synth.SampFrameLen;
-                workItems.push_back({std::move(plan), _voice});
+                speakPlan(_be.Process(tokens, endPunct), true);
             });
         }
 
-        onEventsReady(events.data(), (int32_t)events.size(), userdata);
-
-        for (const auto& item : workItems) {
-            _voice = item.voice;
-            RebuildPipeline();
-            ProcessSentenceStreamingFromPlan(item.plan, cb);
-        }
+        // the batched path left a fresh AudioProcessor behind; keep that post-state
+        if (rendered) { _be = AudioProcessor(_voice); }
     }
 
     void TtsEngine::ApplyCommand(const EmbeddedCmd::VoiceCommand& cmd) {
@@ -336,6 +322,10 @@ namespace SharpVox {
 
     void TtsEngine::RebuildPipeline() {
         _be = AudioProcessor(_voice);
+        ResetSynthVoice();
+    }
+
+    void TtsEngine::ResetSynthVoice() {
         _renderer = SpeechRenderer(_voice);
 #ifdef SHARPVOX_FIXED_POINT_SYNTH
         _synth = KlattSynthesizerFP(SampleRate);

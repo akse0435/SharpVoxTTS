@@ -34,11 +34,10 @@ static void speak_with_phonemes(SharpVoxSpeaker& speaker, const char* text) {
     std::vector<short> samples;
 
     speaker.SpeakWithEvents(text,
-        [](SharpVoxSpeaker* /*speaker*/, const short* buf, int len, void* ud) {
+        [](SharpVoxSpeaker* /*speaker*/, const short* buf, int len,
+           const PhonemeEvent* events, int32_t count, void* ud) {
             auto* s = static_cast<std::vector<short>*>(ud);
             s->insert(s->end(), buf, buf + len);
-        },
-        [](SharpVoxSpeaker* /*speaker*/, const PhonemeEvent* events, int32_t count, void* /*ud*/) {
             for (int32_t i = 0; i < count; i++) {
                 printf("  phoneme %d at %.3fs\n", events[i].Phoneme, events[i].TimeSeconds);
             }

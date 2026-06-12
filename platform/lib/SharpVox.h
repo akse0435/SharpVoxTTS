@@ -23,9 +23,11 @@ public:
     void Speak(const std::string& text,
                void (*onBuffer)(SharpVoxSpeaker* speaker, const int16_t* buf, int32_t len, void* userdata),
                void* userdata = nullptr);
+    // Streams audio chunks with the phoneme events whose onsets fall inside each chunk.
+    // The full event list accumulates in PhonemeEvents() as chunks are delivered.
     void SpeakWithEvents(const std::string& text,
-                         void (*onBuffer)(SharpVoxSpeaker* speaker, const int16_t* buf, int32_t len, void* userdata),
-                         void (*onEventsReady)(SharpVoxSpeaker* speaker, const PhonemeEvent* events, int32_t count, void* userdata),
+                         void (*onChunk)(SharpVoxSpeaker* speaker, const int16_t* buf, int32_t len,
+                                         const PhonemeEvent* events, int32_t count, void* userdata),
                          void* userdata = nullptr);
 
     // Polls pending phoneme events up to absoluteSeconds and fires OnPhoneme for each
@@ -227,7 +229,6 @@ public:
     void SetVocalConfidence(int32_t v) { _vocalConfidence = v; MarkCustom(); }
 
 private:
-    TtsEngine _engine;
     bool _isSpeaking = false;
 
     std::vector<PhonemeEvent> _phonemeEvents;
@@ -301,6 +302,10 @@ private:
     int32_t _emphasisBoost = 0;
     int32_t _vocalConfidence = 0;
 
+    // Declared after every member BuildVoice() reads: the constructor builds
+    // _engine from BuildVoice(), and members initialize in declaration order.
+    TtsEngine _engine;
+
     void MarkCustom();
     std::string PrepareText(const std::string& text);
 
@@ -309,7 +314,8 @@ private:
 
     struct SpeakCtx;
     static void SpeakBufAdapter(const int16_t* buf, int32_t len, void* ud);
-    static void SpeakEventsAdapter(const PhonemeEvent* events, int32_t count, void* ud);
+    static void SpeakChunkAdapter(const int16_t* buf, int32_t len,
+                                  const PhonemeEvent* events, int32_t count, void* ud);
 };
 
 }  // namespace SharpVox

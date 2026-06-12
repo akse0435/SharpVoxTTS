@@ -65,10 +65,10 @@ int main(int argc, char** argv) {
     try {
         speaker.SpeakWithEvents(
             text,
-            [](SharpVox::SharpVoxSpeaker*, const int16_t*, int32_t, void*) {},
-            [](SharpVox::SharpVoxSpeaker*, const SharpVox::PhonemeEvent* ev, int32_t count, void* ud) {
+            [](SharpVox::SharpVoxSpeaker*, const int16_t*, int32_t,
+               const SharpVox::PhonemeEvent* ev, int32_t count, void* ud) {
                 auto* out = static_cast<std::vector<SharpVox::PhonemeEvent>*>(ud);
-                out->assign(ev, ev + count);
+                out->insert(out->end(), ev, ev + count);
             },
             &events
         );
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
 
     for (const auto& ev : events) {
         const char* name = nullptr;
-        if (ev.Phoneme == SharpVox::AudioProcessor::_SIL_) {
+        if (ev.Phoneme == SharpVox::_SIL_) {
             name = "SIL";
         } else if (ev.Phoneme >= 0 && ev.Phoneme < 56) {
             name = SharpVox::AudioProcessor::PhonemeNamesTable[ev.Phoneme];

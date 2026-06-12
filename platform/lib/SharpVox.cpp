@@ -36,7 +36,8 @@ std::string SharpVoxSpeaker::PrepareText(const std::string& text) {
 struct SharpVoxSpeaker::SpeakCtx {
     SharpVoxSpeaker* speaker;
     void (*userOnBuffer)(SharpVoxSpeaker*, const int16_t*, int32_t, void*);
-    void (*userOnEvents)(SharpVoxSpeaker*, const PhonemeEvent*, int32_t, void*);
+    void (*userOnChunk)(SharpVoxSpeaker*, const int16_t*, int32_t,
+                        const PhonemeEvent*, int32_t, void*);
     void* userdata;
 };
 
@@ -45,14 +46,12 @@ void SharpVoxSpeaker::SpeakBufAdapter(const int16_t* buf, int32_t len, void* ud)
     c->userOnBuffer(c->speaker, buf, len, c->userdata);
 }
 
-void SharpVoxSpeaker::SpeakEventsAdapter(const PhonemeEvent* events, int32_t count, void* ud) {
+void SharpVoxSpeaker::SpeakChunkAdapter(const int16_t* buf, int32_t len,
+                                        const PhonemeEvent* events, int32_t count, void* ud) {
     auto* c = static_cast<SpeakCtx*>(ud);
-    c->speaker->_phonemeEvents.assign(events, events + count);
-    c->speaker->_nextPhonemeIndex = 0;
-    c->speaker->_pollElapsed = 0.0f;
-    if (c->userOnEvents) {
-        c->userOnEvents(c->speaker, events, count, c->userdata);
-    }
+    auto& evs = c->speaker->_phonemeEvents;
+    evs.insert(evs.end(), events, events + count);
+    c->userOnChunk(c->speaker, buf, len, events, count, c->userdata);
 }
 
 void SharpVoxSpeaker::Speak(const std::string& text,
@@ -70,13 +69,16 @@ void SharpVoxSpeaker::Speak(const std::string& text,
 }
 
 void SharpVoxSpeaker::SpeakWithEvents(const std::string& text,
-                                       void (*onBuffer)(SharpVoxSpeaker*, const int16_t*, int32_t, void*),
-                                       void (*onEventsReady)(SharpVoxSpeaker*, const PhonemeEvent*, int32_t, void*),
+                                       void (*onChunk)(SharpVoxSpeaker*, const int16_t*, int32_t,
+                                                       const PhonemeEvent*, int32_t, void*),
                                        void* userdata) {
     _isSpeaking = true;
+    _phonemeEvents.clear();
+    _nextPhonemeIndex = 0;
+    _pollElapsed = 0.0f;
     try {
-        SpeakCtx ctx { this, onBuffer, onEventsReady, userdata };
-        _engine.SpeakWithEvents(PrepareText(text), SpeakBufAdapter, SpeakEventsAdapter, &ctx);
+        SpeakCtx ctx { this, nullptr, onChunk, userdata };
+        _engine.SpeakWithEvents(PrepareText(text), SpeakChunkAdapter, &ctx);
         _isSpeaking = false;
     } catch (...) {
         _isSpeaking = false;

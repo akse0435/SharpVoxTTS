@@ -27,20 +27,9 @@ namespace {
     struct SpeakCtx {
         sharpvox_buffer_cb cb;
         void* userdata;
-        const SharpVox::PhonemeEvent* events;
-        int32_t event_count;
+        int phon;
         int32_t sample_pos;
     };
-
-    int find_phoneme(const SharpVox::PhonemeEvent* ev, int32_t n, int32_t pos) {
-        float t = (float)pos / 22050.0f;
-        int phon = -1;
-        for (int32_t i = 0; i < n; i++) {
-            if (ev[i].TimeSeconds <= t) phon = ev[i].Phoneme;
-            else break;
-        }
-        return phon;
-    }
 }
 
 void sharpvox_speak(const char* text, sharpvox_buffer_cb on_buffer, void* userdata) {
@@ -49,22 +38,21 @@ void sharpvox_speak(const char* text, sharpvox_buffer_cb on_buffer, void* userda
     SpeakCtx ctx;
     ctx.cb = on_buffer;
     ctx.userdata = userdata;
-    ctx.events = nullptr;
-    ctx.event_count = 0;
+    ctx.phon = -1;
     ctx.sample_pos = 0;
 
     s_engine->SpeakWithEvents(
         text,
-        [](const int16_t* buf, int32_t len, void* ud) {
+        [](const int16_t* buf, int32_t len,
+           const SharpVox::PhonemeEvent* ev, int32_t n, void* ud) {
             auto* c = static_cast<SpeakCtx*>(ud);
-            int phon = find_phoneme(c->events, c->event_count, c->sample_pos);
+            // report the phoneme sounding at the start of this chunk
+            float t0 = (float)c->sample_pos / 22050.0f;
+            int phon = c->phon;
+            for (int32_t i = 0; i < n && ev[i].TimeSeconds <= t0; i++) phon = ev[i].Phoneme;
             c->cb(buf, len, phon, c->userdata);
+            if (n > 0) c->phon = ev[n - 1].Phoneme;
             c->sample_pos += len;
-        },
-        [](const SharpVox::PhonemeEvent* ev, int32_t n, void* ud) {
-            auto* c = static_cast<SpeakCtx*>(ud);
-            c->events      = ev;
-            c->event_count = n;
         },
         &ctx
     );
