@@ -5,7 +5,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
+#include <fcntl.h>
 #define STDIN_FILENO 0
+#define STDOUT_FILENO 1
 #define isatty _isatty
 #else
 #include <unistd.h>
@@ -27,13 +29,37 @@ static void PrintHelp() {
     printf("Usage: sharpvox [options] [\"text\"]\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -o, --output <file>    Output WAV file (plays via ALSA if omitted on Linux)\n");
+    printf("  -o, --output <file>    Output WAV file, '-' for stdout (plays via ALSA if omitted on Linux)\n");
     printf("  -i, --input <file>     Input text file (if text not provided as argument)\n");
     printf("  -r, --rate <value>     Speech rate (default: 160)\n");
     printf("  -s, --samplerate <hz>  Output sample rate (default: 48000)\n");
     printf("  -v, --voice <name>     Voice preset name \xe2\x80\x94 loads voices/<name>.json, fallback to baseline/whisper builtins\n");
     printf("  -h, --help             Show this help message\n");
     printf("\n");
+    printf("With no text argument and stdin piped, lines are read and spoken as they\n");
+    printf("arrive. With stdout piped and no -o, a streaming WAV is written to stdout.\n");
+    printf("\n");
+}
+
+// Reads one line from stdin (without the newline). Returns false at EOF.
+static bool ReadStdinLine(std::string& out) {
+    out.clear();
+    int c;
+    while ((c = fgetc(stdin)) != EOF) {
+        if (c == '\n') return true;
+        out.push_back(static_cast<char>(c));
+    }
+    return !out.empty();
+}
+
+// Returns false if the string is empty or whitespace-only after trimming in-place.
+static bool TrimText(std::string& text) {
+    const std::string ws = " \t\r\n";
+    auto first = text.find_first_not_of(ws);
+    if (first == std::string::npos) return false;
+    auto last = text.find_last_not_of(ws);
+    text = text.substr(first, last - first + 1);
+    return true;
 }
 
 // Lowercase a string in-place
@@ -244,7 +270,7 @@ int main(int argc, char* argv[]) {
     using namespace SharpVox;
     using namespace SharpVox::Cli;
 
-    if (argc == 1) {
+    if (argc == 1 && ::isatty(STDIN_FILENO)) {
         PrintHelp();
         return 0;
     }
@@ -299,6 +325,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // With no text argument or input file, a piped stdin is consumed
+    // line by line during synthesis instead of being slurped up front.
+    bool streamStdin = false;
+
     if (!positionalArgs.empty()) {
         std::string joined;
         for (std::size_t i = 0; i < positionalArgs.size(); i++) {
@@ -310,26 +340,13 @@ int main(int argc, char* argv[]) {
         text = joined;
     } else if (!inputPath.empty() && FileExists(inputPath)) {
         text = ReadAllText(inputPath);
-    } else {
-        // Read from stdin if it is redirected (i.e. not a terminal)
-        if (!::isatty(STDIN_FILENO)) {
-            char buf[4096];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof(buf), stdin)) > 0)
-                text.append(buf, n);
-        }
+    } else if (!::isatty(STDIN_FILENO)) {
+        streamStdin = true;
     }
 
-    // Trim leading/trailing whitespace to mirror string.IsNullOrWhiteSpace check
-    {
-        const std::string ws = " \t\r\n";
-        auto first = text.find_first_not_of(ws);
-        if (first == std::string::npos) {
-            PrintHelp();
-            return 0;
-        }
-        auto last = text.find_last_not_of(ws);
-        text = text.substr(first, last - first + 1);
+    if (!streamStdin && !TrimText(text)) {
+        PrintHelp();
+        return 0;
     }
 
     VoiceData voice;
@@ -357,14 +374,53 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    // Feeds the sink either the fixed text or stdin lines as they arrive
+    auto speakAll = [&](void (*sink)(const int16_t*, int32_t, void*), void* ctx) {
+        if (streamStdin) {
+            std::string line;
+            while (ReadStdinLine(line)) {
+                if (!TrimText(line)) continue;
+                engine->Speak(line, sink, ctx);
+            }
+        } else {
+            engine->Speak(text, sink, ctx);
+        }
+    };
+
+    struct WavCtx { WavStreamWriter* writer; int64_t* total; };
+    int64_t totalSamples = 0;
+
+    bool toStdout = (outputPath == "-");
+    // No -o with stdout piped means write the WAV to the pipe
+    if (!outputExplicit && !::isatty(STDOUT_FILENO)) toStdout = true;
+
+    if (toStdout) {
+#ifdef _WIN32
+        _setmode(_fileno(stdout), _O_BINARY);
+#endif
+        try {
+            WavStreamWriter writer(stdout, sampleRate);
+            WavCtx ctx { &writer, &totalSamples };
+            speakAll([](const int16_t* chunk, int32_t chunkLen, void* ud) {
+                auto* c = static_cast<WavCtx*>(ud);
+                c->writer->Write(chunk, chunkLen);
+                *c->total += chunkLen;
+            }, &ctx);
+            writer.Dispose();
+            fprintf(stderr, "Streamed %.2fs @ %d Hz to stdout\n",
+                    totalSamples / (float)sampleRate,
+                    sampleRate);
+        } catch (const std::exception& ex) {
+            fprintf(stderr, "Error writing WAV to stdout: %s\n", ex.what());
+        }
+    }
 #ifdef HAVE_ALSA
-    if (!outputExplicit) {
+    else if (!outputExplicit) {
         try {
             AlsaPlayer player(sampleRate);
-            struct AlsaCtx { AlsaPlayer* player; int32_t* total; };
-            int32_t totalSamples = 0;
+            struct AlsaCtx { AlsaPlayer* player; int64_t* total; };
             AlsaCtx ctx { &player, &totalSamples };
-            engine->Speak(text, [](const int16_t* chunk, int32_t chunkLen, void* ud) {
+            speakAll([](const int16_t* chunk, int32_t chunkLen, void* ud) {
                 auto* c = static_cast<AlsaCtx*>(ud);
                 c->player->Write(chunk, chunkLen);
                 *c->total += chunkLen;
@@ -375,16 +431,14 @@ int main(int argc, char* argv[]) {
         } catch (const std::exception& ex) {
             fprintf(stderr, "ALSA error: %s\n", ex.what());
         }
-    } else
+    }
 #endif
-    {
+    else {
         if (outputPath.empty()) outputPath = "out.wav";
         try {
             WavStreamWriter writer(outputPath, sampleRate);
-            struct WavCtx { WavStreamWriter* writer; int32_t* total; };
-            int32_t totalSamples = 0;
             WavCtx ctx { &writer, &totalSamples };
-            engine->Speak(text, [](const int16_t* chunk, int32_t chunkLen, void* ud) {
+            speakAll([](const int16_t* chunk, int32_t chunkLen, void* ud) {
                 auto* c = static_cast<WavCtx*>(ud);
                 c->writer->Write(chunk, chunkLen);
                 *c->total += chunkLen;
