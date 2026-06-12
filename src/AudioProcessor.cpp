@@ -82,6 +82,9 @@ namespace SharpVox {
     // Constructor
 
     AudioProcessor::AudioProcessor(const VoiceData& voice) {
+        // CalcRampSteps only fills one entry per phrase reset; zero the rest so
+        // PitchInterpolator never reads garbage when resets outnumber ramps.
+        std::fill(_rampSteps, _rampSteps + kMaxRamps, (int64_t)0);
         InitFromVoice(voice);
     }
 
