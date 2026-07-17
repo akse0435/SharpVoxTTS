@@ -60,7 +60,7 @@ private:
     float _curRate     = 110.0f;
     float _curScale    = 1.0f;
     float _curVibDepth = 0.0f;
-    float _curVibRate  = 5.0f;
+    float _curVibRate  = 6.5f;
     float _curTremDepth = 0.0f;
     float _curTremRate  = 5.0f;
     float _curAsp      = 0.0f;

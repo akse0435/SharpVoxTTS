@@ -77,9 +77,9 @@ struct VoiceData {
     int32_t Quickness = 7200;
     int32_t DownRampStep = 15360;
     int16_t StressDurTime = 50;
-    int16_t VibratoDepth1Raw = 31;
+    int16_t VibratoDepth1Raw = 14;
     int16_t VibratoDepth2Raw = 16;
-    int16_t VibratoFreqRaw = 47;
+    int16_t VibratoFreqRaw = 65; // 6.5hz
     int16_t Intonation = 100;
 
     int16_t UptalkAmt = 0;        // 0-100: sentence-final rising tendency (0=natural fall, 100=strong uptalk/rise)

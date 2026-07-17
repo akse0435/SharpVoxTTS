@@ -119,7 +119,7 @@ void KlattschParser::Reset() {
     _curRate      = 110.0f;
     _curScale     = 1.0f;
     _curVibDepth  = 0.0f;
-    _curVibRate   = 5.0f;
+    _curVibRate   = 6.5f;
     _curTremDepth = 0.0f;
     _curTremRate  = 5.0f;
     _curAsp       = 0.0f;
