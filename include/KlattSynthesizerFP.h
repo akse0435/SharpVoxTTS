@@ -143,6 +143,7 @@ namespace SharpVox {
         int32_t _f5pD1, _f5pD2;
         int32_t _f6pD1, _f6pD2;
         int32_t _preemphPrev;   // pre-emphasis one-sample delay, Q0
+        int32_t _preemphA_q15;  // pre-emphasis zero, rate-compensated at construction
         float _tiltPrev;        // spectral tilt one-sample delay (float, matches float variant)
 
         //  Amplitude state: Q8 (float * 256) 

@@ -199,6 +199,7 @@ namespace SharpVox {
 
         // Pre-emphasis filter delay (first-difference).
         float _preemphPrev;
+        float _preemphA;   // pre-emphasis zero, rate-compensated at construction
 
         // NZ/NP gain normalization factor, interpolated each frame.
         float _nasalNorm = 1.0f;

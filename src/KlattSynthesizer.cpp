@@ -112,6 +112,9 @@ namespace SharpVox {
         _lastAsp = _lastTilt = 0.0f;
 
         _preemphPrev = 0.0f;
+        // Rate-compensated pre-emphasis zero: keeps the corner at ~107 Hz at any
+        // rate. A fixed 0.97 sits at a fixed fraction of Nyquist instead.
+        _preemphA = std::pow(0.97f, 22050.0f / (float)sampleRate);
 
         _noiseAmp = 0.0f;
         _breathGain = 0.0f;
@@ -633,9 +636,9 @@ namespace SharpVox {
 
                 float sample = cascadeOut + (sampAB - samp3 + samp4 - samp5 + samp6 - samp2);
                 if (_hfEmph) {
-                    // First-difference pre-emphasis (Klatt 1980): y = x - 0.97*x[n-1] compensates
+                    // First-difference pre-emphasis (Klatt 1980): y = x - a*x[n-1] compensates
                     // for the 6 dB/octave roll-off of the radiation load at the lips.
-                    float preemphOut = sample - 0.97f * _preemphPrev;
+                    float preemphOut = sample - _preemphA * _preemphPrev;
                     _preemphPrev = sample;
                     sample = preemphOut;
                 }

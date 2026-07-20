@@ -120,6 +120,11 @@ KlattSynthesizerFP::KlattSynthesizerFP(int32_t sampleRate) {
     _outputGain_q15   = (int32_t)(_outputGain * 32768.0f);
     _noiseGain_q0     = 0;  // set in SetVoice
 
+    // Pre-emphasis zero, rate-compensated so its corner stays at ~107 Hz.
+    // A fixed 0.97 puts the zero at a fixed fraction of Nyquist, which costs
+    // ~1.5 dB of 2-4 kHz energy per doubling of rate. 22050 is the tuning anchor.
+    _preemphA_q15 = (int32_t)(std::pow(0.97, 22050.0 / (double)sampleRate) * 32768.0 + 0.5);
+
     // (1<<28)/sampleRate in Q4: glotPhaseInc = effF0Hz * _phaseIncPerHz_q4 >> 4
     _phaseIncPerHz_q4 = (int32_t)((1LL << 28) / sampleRate);
 
@@ -743,9 +748,9 @@ void KlattSynthesizerFP::SynthesizeFrame(Frame frame, int16_t* outputBuffer, int
 
             int32_t sample = cascadeOut + (sampAB - samp3 + samp4 - samp5 + samp6 - samp2);
 
-            // Pre-emphasis: y = x - 0.97*x[n-1]  (0.97 * 32768 = 31785 in Q15)
+            // Pre-emphasis: y = x - a*x[n-1], a in Q15 (rate-compensated, see ctor)
             if (_hfEmph) {
-                int32_t pe = sample - (int32_t)(((int64_t)31785 * _preemphPrev) >> 15);
+                int32_t pe = sample - (int32_t)(((int64_t)_preemphA_q15 * _preemphPrev) >> 15);
                 _preemphPrev = sample;
                 sample = pe;
             }
