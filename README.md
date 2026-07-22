@@ -13,3 +13,11 @@ you can read the Documentation [Here](DOCUMENTATION.md)
 # Languages
 1. English
 2. Japanese (hiragana only, experimental, looking for native speaker feedback)
+
+# contributing
+PRs are accepted
+
+if you find a pronunciation issue, you can report it either in the pronunciation tracker issue or in the discord
+you can pick from one of the two links below:
+[discord](https://discord.gg/BhFrpVmyG)
+[Pronunciation tracker](https://github.com/dectalk/SharpVoxTTS/issues/4)
