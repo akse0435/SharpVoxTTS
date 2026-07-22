@@ -656,6 +656,18 @@ int16_t SpeechRenderer::GetTargetRaw(int32_t index) {
             if ((PC(index + 1) & kPlosive_Release) != 0 && tv >= 4) {
                 tv -= 4;
             }
+            // Voiced fricatives radiate weaker frication than their voiceless
+            // counterparts: glottal vibration lowers transglottal pressure and
+            // hence noise (Stevens 1998). The tables give V/DH/Z/ZH the same
+            // noise level as F/TH/S/SH, so the voicing bar is the only cue and
+            // it fades word-finally, making Z sound like S. Attenuate the noise
+            // so voicing stays dominant.
+            if ((cf & kFric) != 0 && (cf & kVoicedF) != 0 && tv > 0) {
+                tv -= 8;
+                if (tv < 0) {
+                    tv = 0;
+                }
+            }
         }
     }
     return tv;
