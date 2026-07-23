@@ -63,6 +63,13 @@ namespace SharpVox {
         static constexpr int32_t kDurStepRes         = 8;
         static constexpr int32_t kNormal_Speech_Rate = 180;
         static constexpr int32_t kMinRate            = 40;
+        // Post-scale duration floor for sonorant consonants (Klatt 1976
+        // incompressibility). Below this a nasal/liquid/glide has no time for its
+        // formant target to register at extreme rate. Overridable via -D at build time.
+#ifndef SVX_MIN_SONORANT_FRAMES
+#define SVX_MIN_SONORANT_FRAMES 2
+#endif
+        static constexpr int32_t kMinSonorantFrames  = SVX_MIN_SONORANT_FRAMES;
         static constexpr int32_t k1pct               = 655;
         static constexpr int32_t pct                 = 655;
         static constexpr int32_t kOneHalf            = 0x8000;

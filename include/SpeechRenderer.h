@@ -86,6 +86,15 @@ private:
     int32_t _transTime     = 0;
     int32_t _curBlockIndex = 0;
 
+    // Q16 scale for fixed-length events (formant transition ramps and stop
+    // bursts) so they shrink toward the linear tempo at high rates instead of
+    // holding their textbook length. 1.0 (65536) below the linearization threshold.
+    int32_t _transRateScaleQ16 = 65536;
+
+    // Q16 cascade-bandwidth widening applied to voiced frames at high rate so
+    // formants settle faster. 1.0 (65536) at/below normal rate.
+    int32_t _bwWidenQ16 = 65536;
+
     int32_t _durDoneInPhon  = 0;
     int32_t _curPhonBufIndex = 0;
     bool _startingNewPhon    = true;
@@ -112,6 +121,15 @@ private:
     static constexpr int32_t kStepSizeRes = 3;
     static constexpr int32_t k1pct        = 655;
     static constexpr int32_t kFrameTime   = 5;
+    // Overridable via -D at build time; defaults are the shipped values.
+#ifndef SVX_MIN_TRANS_FRAMES
+#define SVX_MIN_TRANS_FRAMES 2
+#endif
+#ifndef SVX_MAX_TRANS_PCT
+#define SVX_MAX_TRANS_PCT 40
+#endif
+    static constexpr int32_t kMinTransFrames = SVX_MIN_TRANS_FRAMES;  // ramp floor: >=N frames so the delta is not stepped in one frame (click)
+    static constexpr int32_t kMaxTransPct    = SVX_MAX_TRANS_PCT;  // each high-rate ramp <= this pct of the phoneme so a steady core survives
     static constexpr int32_t ReciprocalTableSize = 100;
     static constexpr int32_t kOneHalf     = 0x8000;
 
@@ -298,6 +316,11 @@ private:
     // Scales a duration percentage by the ratio of actual-to-canonical phoneme duration.
     // Produces a frame count proportional to how long this phoneme actually lasts.
     int32_t ScalePrcnt(int32_t pct);
+
+    // Shrinks a fixed transition length by _transRateScaleQ16 so onset and
+    // offset ramps track the tempo at high rates. Full-duration holds and
+    // zero-length transitions pass through unchanged; result is clamped to [1, dur].
+    int32_t LinearizeTransTime(int32_t t);
 
     // Applies vowel-context coloring adjustments to diphthong endpoint formants.
     //

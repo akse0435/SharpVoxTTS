@@ -7,6 +7,73 @@
 
 namespace SharpVox {
 
+    // High-rate intelligibility. Janse et al. (2003) found that at extreme
+    // speech rates uniform (linear) time-scaling is more intelligible than
+    // the natural non-linear pattern, so these helpers blend the duration model
+    // toward linear as the rate climbs. Frac is 0 at/below kStart and 1.0 (65536)
+    // at/above kFull; between, the natural incompressible timing is kept.
+    namespace RateLin {
+        // kStart/kFull overridable via -D at build time; defaults are the shipped values.
+#ifndef SVX_LIN_START
+#define SVX_LIN_START 150
+#endif
+#ifndef SVX_LIN_FULL
+#define SVX_LIN_FULL 350
+#endif
+        static constexpr int32_t kNormalRate = 180;  // matches AudioProcessor baseline
+        static constexpr int32_t kStart      = SVX_LIN_START;  // wpm: below this, natural timing
+        static constexpr int32_t kFull       = SVX_LIN_FULL;  // wpm: at/above this, fully linear
+
+        // Q16 blend fraction in [0, 65536].
+        static inline int32_t FracQ16(int32_t rate) {
+            if (rate <= kStart) return 0;
+            if (rate >= kFull)  return 65536;
+            return (int32_t)(((int64_t)(rate - kStart) << 16) / (kFull - kStart));
+        }
+
+        // Q16 multiplier for fixed-length events (formant transition ramps, stop
+        // bursts) so they shrink toward the linear tempo ratio kNormalRate/rate at
+        // high rates instead of keeping their absolute textbook length. 1.0 when
+        // the blend is inactive.
+        static inline int32_t EventScaleQ16(int32_t rate) {
+            int32_t frac = FracQ16(rate);
+            if (frac == 0 || rate <= 0) return 65536;
+            int64_t ratioQ16 = ((int64_t)kNormalRate << 16) / rate;
+            return (int32_t)(65536 + (((ratioQ16 - 65536) * frac) >> 16));
+        }
+
+        // Q16 cascade-bandwidth scaling by rate (TGSpeechBox reference). Above normal
+        // rate the BW widens: wider BW = shorter resonator time constant = formant
+        // identity reached sooner in short frames. Below normal rate the symmetric
+        // opposite, the BW narrows, since long frames leave time for a sharper, more
+        // defined resonance. Identity exactly at kNormalRate.
+#ifndef SVX_MAX_BW_WIDEN_PCT
+#define SVX_MAX_BW_WIDEN_PCT 30
+#endif
+        // Slow-rate narrowing: max percent, and the rate at/below which it is full.
+#ifndef SVX_MAX_BW_NARROW_PCT
+#define SVX_MAX_BW_NARROW_PCT 20
+#endif
+#ifndef SVX_BW_NARROW_FLOOR_RATE
+#define SVX_BW_NARROW_FLOOR_RATE 90
+#endif
+        static inline int32_t BwWidenQ16(int32_t rate) {
+            if (rate == kNormalRate) return 65536;
+            if (rate > kNormalRate) {
+                int32_t frac = rate >= kFull ? 65536 :
+                    (int32_t)(((int64_t)(rate - kNormalRate) << 16) / (kFull - kNormalRate));
+                int64_t maxAddQ16 = ((int64_t)SVX_MAX_BW_WIDEN_PCT << 16) / 100;
+                return (int32_t)(65536 + ((maxAddQ16 * frac) >> 16));
+            }
+            // rate < kNormalRate: narrow toward (1 - maxNarrow/100) at the floor rate.
+            int32_t floorRate = SVX_BW_NARROW_FLOOR_RATE;
+            int32_t frac = rate <= floorRate ? 65536 :
+                (int32_t)(((int64_t)(kNormalRate - rate) << 16) / (kNormalRate - floorRate));
+            int64_t maxSubQ16 = ((int64_t)SVX_MAX_BW_NARROW_PCT << 16) / 100;
+            return (int32_t)(65536 - ((maxSubQ16 * frac) >> 16));
+        }
+    }
+
     struct PitchState {
         int16_t NextPitchBufTime;
         int16_t PitchBufOutIndex;
