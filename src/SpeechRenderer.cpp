@@ -47,6 +47,7 @@ SpeechRenderer::SpeechRenderer(const VoiceData& voice)
 void SpeechRenderer::RenderStreaming(const ClausePlan& plan, std::function<void(const Frame&)> callback) {
     _plan = &plan;
     _transRateScaleQ16 = RateLin::EventScaleQ16(_plan->Pitch.SpeechRate);
+    _bwWidenQ16 = RateLin::BwWidenQ16(_plan->Pitch.SpeechRate);
     _curPhonBufIndex = 0;
     _durDoneInPhon   = 0;
     _startingNewPhon = true;
@@ -392,6 +393,14 @@ Frame SpeechRenderer::SaveFrame(int16_t f0, uint8_t phonCtrl) {
     f.Bw1 = (int16_t)((_controlData[kBW1] * _voiceBWgain1) >> 16);
     f.Bw2 = (int16_t)((_controlData[kBW2] * _voiceBWgain2) >> 16);
     f.Bw3 = (int16_t)((_controlData[kBW3] * _voiceBWgain3) >> 16);
+    // High-rate resonator settling (TGSpeechBox reference): widen the cascade
+    // bandwidths on voiced frames as rate climbs so formants reach identity in
+    // fewer frames. Identity at/below normal rate; leaves aspiration widening intact.
+    if (_bwWidenQ16 != 65536 && (_curPhonFlags & kVoicedF) != 0) {
+        f.Bw1 = (int16_t)(((int32_t)f.Bw1 * _bwWidenQ16) >> 16);
+        f.Bw2 = (int16_t)(((int32_t)f.Bw2 * _bwWidenQ16) >> 16);
+        f.Bw3 = (int16_t)(((int32_t)f.Bw3 * _bwWidenQ16) >> 16);
+    }
     f.FNZ = KlattSynthesizer::HzToPitch((int16_t)(_controlData[kFNZ] * _tractScale));
     f.Av  = (int16_t)(LogToLin(_controlData[kAV]) * _tractScale);
     f.Af  = LogToLin(_controlData[kAF]);

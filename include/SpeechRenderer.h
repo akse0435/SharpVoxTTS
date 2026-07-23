@@ -91,6 +91,10 @@ private:
     // holding their textbook length. 1.0 (65536) below the linearization threshold.
     int32_t _transRateScaleQ16 = 65536;
 
+    // Q16 cascade-bandwidth widening applied to voiced frames at high rate so
+    // formants settle faster. 1.0 (65536) at/below normal rate.
+    int32_t _bwWidenQ16 = 65536;
+
     int32_t _durDoneInPhon  = 0;
     int32_t _curPhonBufIndex = 0;
     bool _startingNewPhon    = true;

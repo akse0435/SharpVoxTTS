@@ -1524,6 +1524,12 @@ namespace SharpVox {
                 if (curPhon != _SIL_ && d < 8 / kFrameTime) {
                     d = 1;
                 }
+                // Per-class floor after rate scaling: keep sonorant consonants above
+                // one frame so their formant target still registers at extreme rate.
+                // Stops and bursts are meant to stay brief and are left alone.
+                if ((curFlags & kSonorConsonF) != 0 && d < kMinSonorantFrames) {
+                    d = kMinSonorantFrames;
+                }
                 _durBuf[i] = (int16_t)std::max(d, (int32_t)1);
             }
 
