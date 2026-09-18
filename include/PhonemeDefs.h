@@ -37,9 +37,13 @@ namespace SharpVox {
     constexpr int16_t _CH_ = 50; constexpr int16_t _JH_ = 51;  // affricates
     constexpr int16_t _TX_ = 52; constexpr int16_t _DX_ = 53;  // allophones
     constexpr int16_t _QX_ = 54; constexpr int16_t _DD_ = 55;
-    // Japanese phonemes: block 56-60 (local indices 0-4 = JP_A..JP_O)
-    constexpr int16_t _JP_A_ = 56; constexpr int16_t _JP_I_ = 57;
-    constexpr int16_t _JP_U_ = 58; constexpr int16_t _JP_E_ = 59; constexpr int16_t _JP_O_ = 60;
+    // Extra vowel target phonemes (no glide): English block 56-61
+    constexpr int16_t _AYX_ = 56; constexpr int16_t _EYX_ = 57;  // AY/EY targets
+    constexpr int16_t _OYX_ = 58; constexpr int16_t _AWX_ = 59;  // OY/AW targets
+    constexpr int16_t _OWX_ = 60; constexpr int16_t _YUX_ = 61;  // OW/YU targets
+    // Japanese phonemes: block 62-66 (local indices 0-4 = JP_A..JP_O)
+    constexpr int16_t _JP_A_ = 62; constexpr int16_t _JP_I_ = 63;
+    constexpr int16_t _JP_U_ = 64; constexpr int16_t _JP_E_ = 65; constexpr int16_t _JP_O_ = 66;
     constexpr int16_t _Comma_    = 67;
     constexpr int16_t _Period_   = 68;
     constexpr int16_t _Quest_    = 69;

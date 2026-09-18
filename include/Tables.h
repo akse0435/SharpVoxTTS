@@ -41,11 +41,11 @@ public:
 
     // Phoneme block layout
     static constexpr int32_t kEnglishBase = 0;
-    static constexpr int32_t kEnglishCoreSize = 56;   // 0-55 active
-    static constexpr int32_t kEnglishBlockSize = 56;   // exactly 56 English phonemes
-    static constexpr int32_t kJapaneseBase = 56;
+    static constexpr int32_t kEnglishCoreSize = 62;   // 0-61 active
+    static constexpr int32_t kEnglishBlockSize = 62;   // exactly 62 English phonemes
+    static constexpr int32_t kJapaneseBase = 62;
     static constexpr int32_t kJapaneseCoreSize = 5;    // JP_A..JP_O
-    static constexpr int32_t kJapaneseBlockSize = 32;   // 56-87 with spare
+    static constexpr int32_t kJapaneseBlockSize = 32;   // 62-93 with spare
 
     static int32_t PhonemeLanguage(int32_t id);
     static int32_t PhonemeLocalIndex(int32_t id);
@@ -75,31 +75,31 @@ public:
     static int16_t GetFemaleBandwidth3(int32_t id);
 
     // Packed phoneme feature flags indexed by phoneme ID.
-    // 56 entries (0-55 English); see PhonemeDefs.h kVowelF etc. for flag layout.
-    static constexpr int32_t PhonemeFeatureFlagsLength = 56;
+    // 62 entries (0-61 English); see PhonemeDefs.h kVowelF etc. for flag layout.
+    static constexpr int32_t PhonemeFeatureFlagsLength = 62;
     static constexpr int32_t JapanesePhonemeFeatureFlagsLength = 5;
     static const uint32_t PhonemeFeatureFlags[];
     static const uint32_t JapanesePhonemeFeatureFlags[];
 
     // MinimumDurationTable[phon] = min duration in ms
-    static constexpr int32_t MinimumDurationTableLength = 56;
+    static constexpr int32_t MinimumDurationTableLength = 62;
     static constexpr int32_t JapaneseMinimumDurationTableLength = 5;
     static const int16_t MinimumDurationTable[];
     static const int16_t JapaneseMinimumDurationTable[];
 
     // MaximumDurationTable[phon] = max duration in ms
-    static constexpr int32_t MaximumDurationTableLength = 56;
+    static constexpr int32_t MaximumDurationTableLength = 62;
     static constexpr int32_t JapaneseMaximumDurationTableLength = 5;
     static const int16_t MaximumDurationTable[];
     static const int16_t JapaneseMaximumDurationTable[];
 
     static constexpr int32_t BoundaryDurationTableLength = 21;
-    static constexpr int32_t ForwardRankTableLength = 56;
+    static constexpr int32_t ForwardRankTableLength = 62;
     static constexpr int32_t JapaneseForwardRankTableLength = 5;
-    static constexpr int32_t BackwardRankTableLength = 56;
+    static constexpr int32_t BackwardRankTableLength = 62;
     static constexpr int32_t JapaneseBackwardRankTableLength = 5;
     static constexpr int32_t DefaultTargetFrequenciesTableLength = 6;
-    static constexpr int32_t BurstDurationTableLength = 56;
+    static constexpr int32_t BurstDurationTableLength = 62;
     static const int16_t BoundaryDurationTable[];
     static const int16_t ForwardRankTable[];
     static const int16_t JapaneseForwardRankTable[];
@@ -108,39 +108,39 @@ public:
     static const int16_t DefaultTargetFrequenciesTable[];
     static const int16_t BurstDurationTable[];
 
-    static constexpr int32_t PhonemePitchTableLength = 56;
+    static constexpr int32_t PhonemePitchTableLength = 62;
     static constexpr int32_t JapanesePhonemePitchTableLength = 5;
     static const int16_t PhonemePitchTable[];
     static const int16_t JapanesePhonemePitchTable[];
 
-    static constexpr int32_t NoiseIndexTableLength = 56;
-    static constexpr int32_t MaleFormant1FrequencyTableLength = 56;
+    static constexpr int32_t NoiseIndexTableLength = 62;
+    static constexpr int32_t MaleFormant1FrequencyTableLength = 62;
     static constexpr int32_t JapaneseMaleFormant1FrequencyTableLength = 5;
-    static constexpr int32_t MaleFormant2FrequencyTableLength = 56;
+    static constexpr int32_t MaleFormant2FrequencyTableLength = 62;
     static constexpr int32_t JapaneseMaleFormant2FrequencyTableLength = 5;
-    static constexpr int32_t MaleFormant3FrequencyTableLength = 56;
+    static constexpr int32_t MaleFormant3FrequencyTableLength = 62;
     static constexpr int32_t JapaneseMaleFormant3FrequencyTableLength = 5;
-    static constexpr int32_t MaleBandwidth1FrequencyTableLength = 56;
+    static constexpr int32_t MaleBandwidth1FrequencyTableLength = 62;
     static constexpr int32_t JapaneseMaleBandwidth1FrequencyTableLength = 5;
-    static constexpr int32_t MaleBandwidth2FrequencyTableLength = 56;
+    static constexpr int32_t MaleBandwidth2FrequencyTableLength = 62;
     static constexpr int32_t JapaneseMaleBandwidth2FrequencyTableLength = 5;
-    static constexpr int32_t MaleBandwidth3FrequencyTableLength = 56;
+    static constexpr int32_t MaleBandwidth3FrequencyTableLength = 62;
     static constexpr int32_t JapaneseMaleBandwidth3FrequencyTableLength = 5;
-    static constexpr int32_t MaleAmplitudeVoicingVolumeTableLength = 56;
+    static constexpr int32_t MaleAmplitudeVoicingVolumeTableLength = 62;
     static constexpr int32_t JapaneseMaleAmplitudeVoicingVolumeTableLength = 5;
-    static constexpr int32_t FemaleFormant1FrequencyTableLength = 56;
+    static constexpr int32_t FemaleFormant1FrequencyTableLength = 62;
     static constexpr int32_t JapaneseFemaleFormant1FrequencyTableLength = 5;
-    static constexpr int32_t FemaleFormant2FrequencyTableLength = 56;
+    static constexpr int32_t FemaleFormant2FrequencyTableLength = 62;
     static constexpr int32_t JapaneseFemaleFormant2FrequencyTableLength = 5;
-    static constexpr int32_t FemaleFormant3FrequencyTableLength = 56;
+    static constexpr int32_t FemaleFormant3FrequencyTableLength = 62;
     static constexpr int32_t JapaneseFemaleFormant3FrequencyTableLength = 5;
-    static constexpr int32_t FemaleBandwidth1FrequencyTableLength = 56;
+    static constexpr int32_t FemaleBandwidth1FrequencyTableLength = 62;
     static constexpr int32_t JapaneseFemaleBandwidth1FrequencyTableLength = 5;
-    static constexpr int32_t FemaleBandwidth2FrequencyTableLength = 56;
+    static constexpr int32_t FemaleBandwidth2FrequencyTableLength = 62;
     static constexpr int32_t JapaneseFemaleBandwidth2FrequencyTableLength = 5;
-    static constexpr int32_t FemaleBandwidth3FrequencyTableLength = 56;
+    static constexpr int32_t FemaleBandwidth3FrequencyTableLength = 62;
     static constexpr int32_t JapaneseFemaleBandwidth3FrequencyTableLength = 5;
-    static constexpr int32_t FemaleAmplitudeVoicingVolumeTableLength = 56;
+    static constexpr int32_t FemaleAmplitudeVoicingVolumeTableLength = 62;
     static constexpr int32_t JapaneseFemaleAmplitudeVoicingVolumeTableLength = 5;
     static constexpr int32_t LogarithmicToLinearTableLength = 32;
     static constexpr int32_t LogarithmBase2TableLength = 512;

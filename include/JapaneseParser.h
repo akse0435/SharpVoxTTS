@@ -9,7 +9,7 @@
 namespace SharpVox {
 
     // Converts a UTF-8 hiragana span directly to PhonemeToken objects.
-    // Vowels use JP phoneme IDs (56-60); consonants use English IDs.
+    // Vowels use JP phoneme IDs (62-66); consonants use English IDs.
     // Japanese /r/ uses DX (alveolar tap).
     class JapaneseParser {
     public:
