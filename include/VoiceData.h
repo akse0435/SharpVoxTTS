@@ -7,13 +7,13 @@ namespace SharpVox {
 
 struct VoiceData {
     // Baseline pitch; JSON voice presets override this.
-    int16_t PitchHz = 104;  // 208 was an octave high (pre-HzToPitch-fix tuning)
+    int16_t PitchHz = 122;  // 208 was an octave high (pre-HzToPitch-fix tuning)
     float TractScale = 1.0f;
     int16_t PitchRange = 120;
     int16_t StressGain = 60;
     int16_t Rate = 160;
     int16_t VoiceType = 0;
-    int16_t VGain = 60;
+    int16_t VGain = 65;
     int16_t AGain = 0;
     int16_t ACycle = 192;
 
@@ -35,10 +35,10 @@ struct VoiceData {
     int16_t LipRounding = 0;     // -100=spread (F1 up,F2++,F3 up), 0=neutral, +100=rounded (F1 dn,F2--,F3 dn)
     int16_t OnsetHardness = 50;  // 0=soft breathy onset (slow ramp), 50=natural, 100=hard glottal attack (instant)
 
-    int16_t F4Freq = 4825;
-    int16_t F4BW = 650;
-    int16_t F5Freq = 4000;
-    int16_t F5BW = 750;
+    int16_t F4Freq = 3550;
+    int16_t F4BW = 260;
+    int16_t F5Freq = 4500;
+    int16_t F5BW = 330;
 
     int16_t NasalBase = 330;
     int16_t NasalTarg = 400;
@@ -68,7 +68,7 @@ struct VoiceData {
     int16_t RiseAmt1 = 100;    // accent peak target above the phrase floor, pitch units
     int16_t FallAmt1 = -29;
     int32_t Assertiveness = 0x10000;
-    int16_t BaselineFall = 25;
+    int16_t BaselineFall = 18;
     int32_t Quickness = 7200;
     int32_t DownRampStep = 15360;
     int16_t StressDurTime = 50;
@@ -108,12 +108,13 @@ struct VoiceData {
         v.AGain = 400;
         v.ACycle = 16;
         v.F4Freq = 3500;
-        v.F4BW = 50;
+        v.F4BW = 300;
         v.F5Freq = 4500;
         v.F5BW = 250;
         v.BwGain1 = 100;
         v.BwGain3 = 50;
         v.NGain = 200;
+        v.BaselineFall = 25;
         return v;
     }
 };
