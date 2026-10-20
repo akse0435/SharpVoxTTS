@@ -299,7 +299,7 @@ void KlattSynthesizerFP::SetVoice(int16_t nGain, bool bit16,
 
     // No _noiseScale here: the pink generator's pole and tail gains already
     // hold its PSD rate-invariant, so scaling again overshot at high rates.
-    _noiseGain_q0 = (int32_t)(128.0f * _noiseAmp);
+    _noiseGain_q0 = (int32_t)(128.0f * _noiseAmp * KFricationGain);
 
     InitFixedFormants();
 }

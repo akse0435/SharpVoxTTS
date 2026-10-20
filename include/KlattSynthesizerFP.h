@@ -32,6 +32,8 @@ namespace SharpVox {
         static constexpr int32_t KPrecision          = 13;
         static constexpr int32_t KOnePtOh            = 0x2000;
         static constexpr int32_t KNoiseGain          = 2500;
+        // parallel frication/burst bank gain
+        static constexpr float   KFricationGain      = 2.8f;
         static constexpr int32_t KDefaultSampleRate  = 22050;
         static constexpr int32_t KDefaultSampFrameLen= 112;
 

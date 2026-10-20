@@ -530,6 +530,11 @@ void SpeechRenderer::GetLocus(int32_t iCons, int32_t iVowel, int32_t bType) {
             intercept = 792 + _locusOffset;
             // Lehiste & Peterson (1961) Table III: velars ~7.8-8.8 cs
             _transTime = 80 / kFrameTime;
+        } else if ((cf & kDentalF) != 0) {
+            // Dentals: the alveolar equation gives a glide-like /j/ onset
+            slopeQ15  = 19661;
+            intercept = 700 + _locusOffset;
+            _transTime = 70 / kFrameTime;
         } else {
             slopeQ15  = 13763;
             intercept = 1211 + _locusOffset;
