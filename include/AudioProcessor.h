@@ -18,7 +18,7 @@ namespace SharpVox {
         int16_t  Phon       = 0;
         int64_t  Ctrl       = 0;     // kWord_Start, stress flags, etc.
         int16_t  UserPitch  = 0;
-        int16_t  UserDur    = 0;     // 0 = kDur_One, no scaling
+        int32_t  UserDur    = 0;     // 0 = kDur_One, no scaling
         int16_t  UserNote   = 0;
         int16_t  UserRate   = 0;
 
@@ -111,7 +111,7 @@ namespace SharpVox {
         std::vector<int16_t>  _phonBuf1;
         std::vector<int64_t>  _phonCtrlBuf1;
         std::vector<int16_t>  _userPitchBuf1;
-        std::vector<int16_t>  _userDurBuf1;
+        std::vector<int32_t>  _userDurBuf1;
         std::vector<int16_t>  _userNoteBuf1;
         std::vector<int16_t>  _userRateBuf1;
         std::vector<uint8_t>  _aspirationBuf1;
@@ -125,7 +125,7 @@ namespace SharpVox {
         std::vector<int16_t>  _phonBuf2;
         std::vector<int64_t>  _phonCtrlBuf2;
         std::vector<int16_t>  _userPitchBuf2;
-        std::vector<int16_t>  _userDurBuf2;
+        std::vector<int32_t>  _userDurBuf2;
         std::vector<int16_t>  _userNoteBuf2;
         std::vector<int16_t>  _userRateBuf2;
         std::vector<uint8_t>  _aspirationBuf2;
@@ -136,7 +136,7 @@ namespace SharpVox {
         std::vector<uint8_t>  _tremDepthBuf2;
         std::vector<uint8_t>  _tremRateBuf2;
 
-        std::vector<int16_t>  _durBuf;
+        std::vector<int32_t>  _durBuf;
         std::vector<int16_t>  _pitchBufFreq;
         std::vector<int16_t>  _pitchBufTime;
         std::vector<int16_t>  _pitchBufFlags;

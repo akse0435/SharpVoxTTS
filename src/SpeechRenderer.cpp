@@ -794,9 +794,9 @@ void SpeechRenderer::GetDiphthongs(int32_t index) {
     cb.curP_END_Targ    = p2;
 
     cb.ptrToTargetList = _nextDiphEntryIdx;
-    _diphEntries[_nextDiphEntryIdx++] = (int16_t)t2;
-    _diphEntries[_nextDiphEntryIdx++] = (int16_t)step;
-    _diphEntries[_nextDiphEntryIdx++] = (int16_t)_curPhonDur;
+    _diphEntries[_nextDiphEntryIdx++] = t2;
+    _diphEntries[_nextDiphEntryIdx++] = step;
+    _diphEntries[_nextDiphEntryIdx++] = _curPhonDur;
     _diphEntries[_nextDiphEntryIdx++] = 0;
 }
 

@@ -199,7 +199,7 @@ namespace SharpVox {
 
         _phonBuf1.assign(buf1N,  (int16_t)_SIL_);
         _phonCtrlBuf1.assign(buf1N,  (int64_t)0);
-        _userDurBuf1.assign(buf1N,   (int16_t)kDur_One);
+        _userDurBuf1.assign(buf1N,   (int32_t)kDur_One);
         _userPitchBuf1.assign(buf1N, (int16_t)0);
         _userNoteBuf1.assign(buf1N,  (int16_t)0);
         _userRateBuf1.assign(buf1N,  (int16_t)0);
@@ -213,7 +213,7 @@ namespace SharpVox {
 
         _phonBuf2.assign(buf2N,  (int16_t)_SIL_);
         _phonCtrlBuf2.assign(buf2N,  (int64_t)0);
-        _userDurBuf2.assign(buf2N,   (int16_t)kDur_One);
+        _userDurBuf2.assign(buf2N,   (int32_t)kDur_One);
         _userPitchBuf2.assign(buf2N, (int16_t)0);
         _userNoteBuf2.assign(buf2N,  (int16_t)0);
         _userRateBuf2.assign(buf2N,  (int16_t)0);
@@ -225,7 +225,7 @@ namespace SharpVox {
         _tremDepthBuf2.assign(buf2N,  (uint8_t)0);
         _tremRateBuf2.assign(buf2N,   (uint8_t)0);
 
-        _durBuf.assign(buf2N,           (int16_t)0);
+        _durBuf.assign(buf2N,           (int32_t)0);
         _pitchBufFreq.assign(pitchN,    (int16_t)0);
         _pitchBufTime.assign(pitchN,    (int16_t)0);
         _pitchBufFlags.assign(pitchN,   (int16_t)0);
@@ -310,7 +310,7 @@ namespace SharpVox {
         // re-assigns them at the start of the next Process() call.
         std::vector<int16_t>  phonBuf      = std::move(_phonBuf2);
         std::vector<int64_t>  controls     = std::move(_phonCtrlBuf2);
-        std::vector<int16_t>  durBuf       = std::move(_durBuf);
+        std::vector<int32_t>  durBuf       = std::move(_durBuf);
         std::vector<int16_t>  userPitchBuf = std::move(_userPitchBuf2);
         std::vector<int16_t>  userNoteBuf  = std::move(_userNoteBuf2);
         std::vector<uint8_t>  aspirationBuf = std::move(_aspirationBuf2);
@@ -453,7 +453,7 @@ namespace SharpVox {
 
         std::vector<int16_t>  phonBuf(vecSize,     _SIL_);
         std::vector<int64_t>  controls(vecSize,     0);
-        std::vector<int16_t>  durBuf(vecSize,        0);
+        std::vector<int32_t>  durBuf(vecSize,        0);
         std::vector<int16_t>  userPitchBuf(vecSize, 0);
         std::vector<int16_t>  userNoteBuf(vecSize,  0);
         std::vector<uint8_t>  aspirationBuf(vecSize, 0);
@@ -486,7 +486,7 @@ namespace SharpVox {
             // Duration mirrors ModDuration's kSingingPhon branch.
             // LoadPhonemes normalises UserDur=0 to kDur_One before passing to
             // ModDuration, so we do the same here.
-            const int16_t userDur = tok.UserDur == 0 ? (int16_t)kDur_One : tok.UserDur;
+            const int32_t userDur = tok.UserDur == 0 ? (int32_t)kDur_One : tok.UserDur;
             int32_t dd;
 
             if ((tok.Ctrl & kSingingPhon) != 0) {
@@ -517,7 +517,7 @@ namespace SharpVox {
                 dd = Tables::GetMinimumDuration(tok.Phon) / kFrameTime;
                 if (dd < 1) { dd = 1; }
             }
-            durBuf[slot] = (int16_t)dd;
+            durBuf[slot] = dd;
         }
         // Terminal SIL so the final note's amplitude can ramp fully down to
         // silence (a gentle release) instead of being cut off at the note
@@ -530,7 +530,7 @@ namespace SharpVox {
             if (td < 1) { td = 1; }
             phonBuf[termSlot]  = _SIL_;
             controls[termSlot] = kSingingPhon | kSingingDuration | kTerm_End | kWord_End;
-            durBuf[termSlot]   = (int16_t)td;
+            durBuf[termSlot]   = td;
         }
 
         // Slots [count] and beyond stay SIL / 0 (already initialised).
@@ -625,7 +625,7 @@ namespace SharpVox {
             _phonBuf1[_phonBuf1InIndex]       = tok.Phon;
             _phonCtrlBuf1[_phonBuf1InIndex]   = tok.Ctrl;
             _userPitchBuf1[_phonBuf1InIndex]  = tok.UserPitch;
-            _userDurBuf1[_phonBuf1InIndex]    = tok.UserDur == 0 ? (int16_t)kDur_One : tok.UserDur;
+            _userDurBuf1[_phonBuf1InIndex]    = tok.UserDur == 0 ? (int32_t)kDur_One : tok.UserDur;
             _userNoteBuf1[_phonBuf1InIndex]   = tok.UserNote;
             _userRateBuf1[_phonBuf1InIndex]   = tok.UserRate;
             _aspirationBuf1[_phonBuf1InIndex] = tok.Aspiration;
@@ -948,7 +948,7 @@ namespace SharpVox {
             uint32_t lastPhonFlags = Tables::GetFeatureFlags(lastStoredPhon);
 
             int16_t  userPitch  = _userPitchBuf1[outIdx];
-            int16_t  userDur    = _userDurBuf1[outIdx];
+            int32_t  userDur    = _userDurBuf1[outIdx];
             int16_t  userNote   = _userNoteBuf1[outIdx];
             int16_t  userRate   = _userRateBuf1[outIdx];
             uint8_t  aspiration = _aspirationBuf1[outIdx];
@@ -1313,7 +1313,7 @@ namespace SharpVox {
                     if (dd < 1) {
                         dd = 1;
                     }
-                    _durBuf[i] = (int16_t)dd;
+                    _durBuf[i] = dd;
                 } else {
                     // Consonants before/after the note vowel use minimum duration
                     // so consonants are brief and the vowel sustains the note.
@@ -1321,7 +1321,7 @@ namespace SharpVox {
                     if (dd < 1) {
                         dd = 1;
                     }
-                    _durBuf[i] = (int16_t)dd;
+                    _durBuf[i] = dd;
                 }
                 goto DURATION_DONE_END;
             }
@@ -1333,7 +1333,7 @@ namespace SharpVox {
                     targetMs = (int32_t)((targetMs * _rateRatio) >> 16);
                 }
                 int32_t d = targetMs / kFrameTime;
-                _durBuf[i] = (int16_t)std::max(d, (int32_t)1);
+                _durBuf[i] = std::max(d, (int32_t)1);
                 goto DURATION_DONE_END;
             }
 
@@ -1359,7 +1359,7 @@ namespace SharpVox {
                     if (curPhon != _SIL_ && d < 8 / kFrameTime) {
                         d = 8 / kFrameTime;
                     }
-                    _durBuf[i] = (int16_t)std::max(d, (int32_t)1);
+                    _durBuf[i] = std::max(d, (int32_t)1);
                     goto DURATION_DONE_END;
                 }
             }
@@ -1532,7 +1532,7 @@ namespace SharpVox {
                             if (dd < 1) {
                                 dd = 1;
                             }
-                            _durBuf[i] = (int16_t)dd;
+                            _durBuf[i] = dd;
                             goto DURATION_DONE_END;
                         }
                     }
@@ -1609,7 +1609,7 @@ namespace SharpVox {
                 if ((curFlags & kSonorConsonF) != 0 && d < kMinSonorantFrames) {
                     d = kMinSonorantFrames;
                 }
-                _durBuf[i] = (int16_t)std::max(d, (int32_t)1);
+                _durBuf[i] = std::max(d, (int32_t)1);
             }
 
         DURATION_DONE_END:;
@@ -1856,7 +1856,7 @@ namespace SharpVox {
         for (int32_t i = 0; i < _phonBuf2InIndex; i++) {
             int64_t curCtrl    = GetCtrl2(i);
             int64_t curSylType = curCtrl & kSyllableTypeField;
-            int16_t curDur     = _durBuf[i];
+            int32_t curDur     = _durBuf[i];
 
             if (mode == kRampMode) {
                 if ((curCtrl & kSilenceTypeField) != 0 || (curSylType & kTerm_End) != 0) {
@@ -1915,7 +1915,7 @@ namespace SharpVox {
             uint32_t curFlags   = Tables::GetFeatureFlags(curPhon);
             int64_t  curStress  = curCtrl & kStressField;
             int64_t  curSylType = curCtrl & kSyllableTypeField;
-            int16_t  curDur     = _durBuf[i];
+            int32_t  curDur     = _durBuf[i];
 
             int64_t prevCtrl = GetCtrl2(i - 1);
 
@@ -2143,7 +2143,7 @@ namespace SharpVox {
         }
 
         for (int32_t i = start; i <= end; i++) {
-            _durBuf[i] = (int16_t)std::max((int32_t)1, (_durBuf[i] * pct + 50) / 100);
+            _durBuf[i] = std::max((int32_t)1, (_durBuf[i] * pct + 50) / 100);
         }
     }
 

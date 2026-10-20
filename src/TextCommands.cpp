@@ -434,7 +434,7 @@ std::vector<EmbeddedCmd::Segment> EmbeddedCmd::ParseSegments(const std::string& 
                     PhonemeToken tok{};
                     tok.Phon    = group[gi];
                     tok.Ctrl    = ctrl;
-                    tok.UserDur  = (gi == durIdx && durSpecified) ? static_cast<int16_t>(adjustedDur) : static_cast<int16_t>(0);
+                    tok.UserDur  = (gi == durIdx && durSpecified) ? adjustedDur : 0;
                     tok.UserNote = (gi == durIdx) ? pitch : static_cast<int16_t>(0);
                     blockSing.push_back(tok);
                 }

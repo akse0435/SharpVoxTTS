@@ -76,7 +76,7 @@ private:
 
     ControlBlock _cb[15];
     int16_t _controlData[15]  = {};
-    int16_t _diphEntries[4096] = {};
+    int32_t _diphEntries[4096] = {};
     int32_t _nextDiphEntryIdx  = 0;
 
     // Current-phoneme context

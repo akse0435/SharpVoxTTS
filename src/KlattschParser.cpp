@@ -601,7 +601,7 @@ void KlattschParser::EmitPhoneme(const Token& t, float durationMs,
     tok.Phon      = phonId;
     tok.Ctrl      = ctrl;
     tok.UserNote  = note;
-    tok.UserDur   = static_cast<int16_t>(std::max(5.0f, durationMs));
+    tok.UserDur   = static_cast<int32_t>(std::max(5.0f, durationMs));
     tok.Aspiration = clampByte(_curAsp  * 100.0f, 0.0f, 100.0f);
     tok.Tilt       = clampByte(_curTilt * 100.0f, 0.0f, 100.0f);
     tok.Effort     = clampByte(_curEffort * 100.0f, 0.0f, 100.0f);
@@ -678,7 +678,7 @@ std::vector<PhonemeToken> KlattschParser::CompileToTokens(const std::vector<Toke
             PhonemeToken silTok{};
             silTok.Phon    = _SIL_;
             silTok.Ctrl    = kSingingPhon | kSingingDuration | kWord_End;
-            silTok.UserDur  = static_cast<int16_t>(t.Ms);
+            silTok.UserDur  = static_cast<int32_t>(t.Ms);
             silTok.UserNote = static_cast<int16_t>(-_curF0);
             result.push_back(silTok);
             continue;
@@ -729,7 +729,7 @@ std::vector<PhonemeToken> KlattschParser::CompileToTokens(const std::vector<Toke
                 PhonemeToken silTok{};
                 silTok.Phon    = _SIL_;
                 silTok.Ctrl    = kSingingPhon | kSingingDuration | kWord_End;
-                silTok.UserDur  = static_cast<int16_t>(std::abs(t.Value));
+                silTok.UserDur  = static_cast<int32_t>(std::abs(t.Value));
                 silTok.UserNote = static_cast<int16_t>(-_curF0);
                 result.push_back(silTok);
             }

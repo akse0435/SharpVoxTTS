@@ -85,9 +85,9 @@ namespace SharpVox {
         int16_t PhonIndexCp;
         int16_t TimeIntoPhonTarg;
         int16_t TimeIntoPhonCp;
-        int16_t CurPhonDurCc;
-        int16_t CurPhonDurCp;
-        int16_t PhonDurDelay;
+        int32_t CurPhonDurCc;
+        int32_t CurPhonDurCp;
+        int32_t PhonDurDelay;
 
         int16_t UvPhonPitchTarg;
         int16_t PhonPitchOffset;
@@ -144,7 +144,7 @@ namespace SharpVox {
         int32_t PhonBufInIndex;
         std::vector<int16_t> PhonBuf;
         std::vector<int64_t> PhonCtrlBuf;
-        std::vector<int16_t> DurBuf;
+        std::vector<int32_t> DurBuf;
         std::vector<int16_t> UserPitchBuf;
         std::vector<int16_t> UserNoteBuf;
         std::vector<uint8_t> AspirationBuf;
@@ -171,7 +171,7 @@ namespace SharpVox {
             int32_t phonBufInIndex,
             std::vector<int16_t> phonBuf,
             std::vector<int64_t> controls,
-            std::vector<int16_t> durBuf,
+            std::vector<int32_t> durBuf,
             std::vector<int16_t> userPitchBuf,
             std::vector<int16_t> userNoteBuf,
             std::vector<uint8_t> aspirationBuf,
