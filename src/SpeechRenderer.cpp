@@ -528,6 +528,9 @@ void SpeechRenderer::GetLocus(int32_t iCons, int32_t iVowel, int32_t bType) {
         } else if ((cf & kVelar) != 0) {
             slopeQ15  = 23266;
             intercept = 792 + _locusOffset;
+            if (vowRank != kFrontR) {
+                intercept -= 200;
+            }
             // Lehiste & Peterson (1961) Table III: velars ~7.8-8.8 cs
             _transTime = 80 / kFrameTime;
         } else if ((cf & kDentalF) != 0) {
@@ -1057,11 +1060,17 @@ void SpeechRenderer::InitCtrlsForNewPhon() {
                 (int32_t)(((int64_t)(tailLevel - cb.curP_END_Targ) * scaleQ16) >> 16);
         }
 
+        if (bt == kFreqType && (_curPhonFlags & kSonorant1F) != 0 && (_prevPhonFlags & kSonorant1F) != 0 &&
+            ((_curPhonFlags | _prevPhonFlags) & kLiqGlideF) != 0 && _prevPhon != _SIL_) {
+            headLevel = cb.prevTailLevel;
+        }
+        cb.prevTailLevel = tailLevel;
+
         cb.HEAD_offs = 0; cb.HEAD_step = 0;
         if (headTime > 0) {
             cb.HEAD_offs = (headLevel - cb.curP_START_Targ) << kStepSizeRes;
             if (cb.HEAD_offs != 0) {
-                int32_t hs   = (int32_t)(((int64_t)OvX(headTime) * cb.HEAD_offs) >> 16);
+                int32_t hs   = (int32_t)(((int64_t)OvX(headTime) * cb.HEAD_offs) / 65536);
                 cb.HEAD_step = hs;
                 cb.HEAD_offs = hs * headTime;
             }
@@ -1340,9 +1349,7 @@ void SpeechRenderer::TailRules(ControlBlock& cb, int32_t bt) {
                     if (_curBlockIndex == kF3) {
                         _transTime = 60 / kFrameTime;
                     }
-                    if ((_nextPhon == _L_ || _nextPhon == _EL_ || _nextPhon == _LX_) && _curBlockIndex == kF1) {
-                        _transLevel += 80;
-                    }
+                    _transLevel = (cb.curP_END_Targ + _transLevel) >> 1;
                 } else if (_nextPhon == _HH_) {
                     _transLevel = (cb.curP_END_Targ + _transLevel) >> 1;
                 }
@@ -1478,6 +1485,9 @@ void SpeechRenderer::TailRules(ControlBlock& cb, int32_t bt) {
                     _transLevel = ampT + 3;
                     if (_nextPhon == _SIL_ || (_nextPhonCtrl & kPlosive_Release) != 0) {
                         _transTime = 75 / kFrameTime;
+                    }
+                    if (_nextPhon == _SIL_ && (_curPhon == _LX_ || _curPhon == _EL_)) {
+                        _transTime = _curPhonDur;
                     }
                 }
             }

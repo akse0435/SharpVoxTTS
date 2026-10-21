@@ -58,6 +58,7 @@ private:
         int16_t curP_END_Targ    = 0;
         int16_t prevP_END_Targ   = 0;
         int16_t nextP_START_Targ = 0;
+        int32_t prevTailLevel    = 0;
         int32_t curTarget_TIME   = 0;
         int32_t curTarget_STEP   = 0;
         int32_t curTarget_OFFS   = 0;

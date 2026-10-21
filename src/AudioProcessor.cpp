@@ -1000,7 +1000,8 @@ namespace SharpVox {
             if (!isSinging &&
                 (curCtrl & (kPrimOrEmphStress | kWord_Initial_Consonant)) == 0 &&
                 (prevFlags & kVowel1F) != 0) {
-                if (curPhon == _L_) {
+                if (curPhon == _L_ && ((nextFlags & kVowelF) == 0 ||
+                                       Tables::GetForwardRank(nextPhon) >= Tables::kBackR)) {
                     targetPhon = _LX_;
                 } else if (curPhon == _R_) {
                     targetPhon = _RX_;
